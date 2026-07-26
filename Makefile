@@ -1,94 +1,109 @@
-# Configuration
-ASM := nasm
-CC  := gcc
+ASM      := nasm
+CC       := gcc
+LD       := ld
+OBJCOPY  := objcopy
 
-export ASM CC
+BUILD := _build
 
-CFLAGS   := -Wall -Wextra -g
-LDFLAGS  :=
-LDLIBS   :=
+# Binary files
+STAGE1_BIN := $(BUILD)/boot/stage1/stage1.bin
+STAGE2_BIN := $(BUILD)/boot/stage2/stage2.bin
+KERNEL_BIN := $(BUILD)/kernel/kernel.bin
+IMAGE := $(BUILD)/neilOS.img
 
-SRC_DIR   := src
-BUILD_DIR := _build
-TOOLS_DIR := tools
-
-BOOTLOADER := $(BUILD_DIR)/bootloader.bin
-KERNEL     := $(BUILD_DIR)/kernel.bin
-IMAGE      := $(BUILD_DIR)/neilOS.img
-
-
-# Default target
-.PHONY: all image
-
+# All
+.PHONY: all image clean run debug
 all: image
-
-image: $(IMAGE)
 
 
 # Disk image
-$(IMAGE): $(BOOTLOADER) $(KERNEL)
-	@mkdir -p $(BUILD_DIR)
+image: $(IMAGE)
+$(IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_BIN)
+	@mkdir -p $(BUILD)
 
-	@echo "Creating floppy image..."
+	@echo "Creating floppy image"
 	dd if=/dev/zero of=$@ bs=512 count=2880
 
-	@echo "Formatting FAT12..."
+	@echo "Formatting FAT12"
 	mkfs.fat -F 12 -n "NEILOS" $@
 
-	@echo "Installing stage1..."
-	dd if=_build/stage1.bin of=$@ bs=512 count=1 conv=notrunc
+	@echo "Installing stage1"
+	dd if=$(STAGE1_BIN) of=$@ bs=512 count=1 conv=notrunc
 
-	@echo "Installing stage2..."
-	mcopy -i $@ _build/stage2.bin "::stage2"
+	@echo "Installing stage2"
+	mcopy -i $@ $(STAGE2_BIN) "::stage2"
 
-	@echo "Installing kernel..."
-	mcopy -i $@ $(KERNEL) "::kernel"
+	@echo "Installing kernel"
+	mcopy -i $@ $(KERNEL_BIN) "::kernel"
 
 
-# Bootloader
-.PHONY: boot stage1 stage2
+# Stage 1
+$(STAGE1_BIN): boot/stage1/boot.asm
+	@mkdir -p $(dir $@)
 
-boot: $(BOOTLOADER)
+	$(ASM) \
+		-f bin \
+		$< \
+		-o $@
 
-STAGE1_BIN := _build/stage1.bin
-STAGE2_BIN := _build/stage2.bin
+	@size=$$(stat -c%s $@); \
+	if [ $$size -ne 512 ]; then \
+		echo "Stage1 must be exactly 512 bytes"; \
+		exit 1; \
+	fi
 
-$(BOOTLOADER): stage1 stage2
-	@mkdir -p $(BUILD_DIR)
 
-stage1:
-	$(MAKE) -C boot/stage1
+# Stage 2
+STAGE2_DIR := $(BUILD)/boot/stage2
 
-stage2:
-	$(MAKE) -C boot/stage2
+$(STAGE2_DIR)/entry.o: boot/stage2/entry.asm
+	@mkdir -p $(dir $@)
+
+	$(ASM) -f elf32 $< -o $@
+
+$(STAGE2_DIR)/stage2.o: boot/stage2/stage2.c
+	@mkdir -p $(dir $@)
+
+	$(CC) \
+		-m16 \
+		-ffreestanding \
+		-fno-pic \
+		-fno-stack-protector \
+		-fno-asynchronous-unwind-tables \
+		-Wall \
+		-c $< \
+		-o $@
+
+
+$(STAGE2_DIR)/stage2.elf: $(STAGE2_DIR)/entry.o $(STAGE2_DIR)/stage2.o boot/stage2/linker.ld
+
+	$(LD) \
+		-m elf_i386 \
+		-T boot/stage2/linker.ld \
+		-o $@ \
+		$(STAGE2_DIR)/entry.o \
+		$(STAGE2_DIR)/stage2.o
+
+
+$(STAGE2_BIN): $(STAGE2_DIR)/stage2.elf
+	$(OBJCOPY) -O binary $< $@
 
 
 # Kernel
-.PHONY: kernel
+$(KERNEL_BIN): kernel/main.asm
+	@mkdir -p $(dir $@)
 
-kernel: $(KERNEL)
-
-$(KERNEL): kernel/main.asm
-	@mkdir -p $(BUILD_DIR)
-	$(ASM) $< -f bin -o $@
+	$(ASM) -f bin $< -o $@
 
 
-# Development helpers
-.PHONY: run debug
-
+# Development
 run: image
 	qemu-system-i386 -fda $(IMAGE)
 
 debug: image
-	qemu-system-i386 -fda $(IMAGE) \
-	-drive format=raw,file=$(BUILD_DIR)/os.img -s -S
+	qemu-system-i386 -fda $(IMAGE) -s -S
 
 
-# Cleanup
-.PHONY: clean
-
+# Clean
 clean:
-	rm -rf $(BUILD_DIR)
-	$(MAKE) -C boot/stage1 clean
-	$(MAKE) -C boot/stage2 clean
-	$(MAKE) -C kernel clean
+	rm -rf $(BUILD)
