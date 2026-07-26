@@ -2,12 +2,12 @@ ASM      ?= nasm
 ASMFLAGS ?= -f bin
 
 SOURCE   = boot.asm
-OUTPUT   = ../../build/stage1.bin
+OUTPUT   = ../../_build/stage1.bin
 
 all: $(OUTPUT) check
 
 $(OUTPUT): $(SOURCE)
-	@mkdir -p ../../build
+	@mkdir -p ../../_build
 	$(ASM) $(ASMFLAGS) $(SOURCE) -o $(OUTPUT)
 
 check: $(OUTPUT)
