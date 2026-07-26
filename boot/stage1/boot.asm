@@ -1,3 +1,4 @@
+
 ; Stage 1 Bootloader
 
 org 0x7C00
@@ -24,7 +25,7 @@ ReservedSectors     dw 1            ; Reserved sectors (boot record)
 NumberofFATs        db 2            ; Number of FAT tables
 RootEntries         dw 224          ; Number of root directory entries
 TotalSectors        dw 2880         ; Total sectors (1.44MB)
-Media               db 0xf8         ; Media descriptor (fixed/floppy)
+Media               db 0xf0         ; Media descriptor (fixed/floppy)
 SectorsPerFAT       dw 9            ; Sectors per FAT table
 SectorsPerTrack     dw 18           ; Sectors per track
 HeadsPerCylinder    dw 2            ; Number of magnetic heads
@@ -215,7 +216,7 @@ disk_error:
     mov si, msg_error
     call puts
 
-.wait
+.wait:
 
     xor ah, ah
     int 16h
