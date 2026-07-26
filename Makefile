@@ -1,9 +1,13 @@
-ASM=nasm
+ASM := nasm
+CC  := gcc
 
-SRC_DIR=src
-BUILD_DIR=build
+BUILD_DIR := build
+SRC_DIR   := src
+TOOLS_DIR := tools
 
-.PHONY: all floopy_iamge bootloader kernel clean always
+.PHONY: all floppy_image bootloader kernel tools_fat clean always
+
+all: floppy_image tools_fat
 
 # Floppy
 floppy_image: $(BUILD_DIR)/main_floppy.img
@@ -25,6 +29,11 @@ kernel: $(BUILD_DIR)/kernel.bin
 
 $(BUILD_DIR)/kernel.bin: always
 	$(ASM) $(SRC_DIR)/kernel/main.asm -f bin -o $(BUILD_DIR)/kernel.bin
+
+tools_fat: $(BUILD_DIR)/tools/fat
+$(BUILD_DIR)/tools/fat: $(TOOLS_DIR)/fat/fat.c
+	mkdir -p $(BUILD_DIR)/tools
+	$(CC) -g -o $@ $<
 
 always:
 	@mkdir -p $(BUILD_DIR)
