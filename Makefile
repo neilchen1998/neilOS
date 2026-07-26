@@ -82,6 +82,10 @@ $(FAT_TOOL): $(TOOLS_DIR)/fat/fat.c $(TOOLS_DIR)/fat/fat.h
 	mkdir -p $(BUILD_DIR)/tools
 	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $@
 
+$(FAT_TOOL).s: $(TOOLS_DIR)/fat/fat.c
+	mkdir -p $(BUILD_DIR)/tools
+	$(CC) $(CFLAGS) -S $< -o $@
+
 
 # =====================
 # Development helpers
