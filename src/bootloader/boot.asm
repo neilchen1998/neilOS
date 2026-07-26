@@ -147,7 +147,7 @@ disk_read:
 
     mov ah, 02h              ; read sectors
     mov al, 1                ; sets the number of sectors
-    stack                    ; sets carry flag (CF)
+    stc                      ; sets carry flag (CF)
     int 13h                  ; calls BIOS disk services
     jnc .done                ; BIOS uses CF to report if the result is success
                              ; only jumps to the next line if failure
