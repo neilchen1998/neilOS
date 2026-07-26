@@ -13,26 +13,25 @@ nop
 db "MSWIN4.1"            ; 8 bytes
 
 ; BIOS Parameter Block
-bytes_per_sector:       dw 512
-sectors_per_cluster:    db 1
-reserved_sectors:       dw 1
-num_fats:               db 2
-root_entries:           dw 224
-total_sectors:          dw 2880
-media:                  db 0xF0
-sectors_per_fat:        dw 9
-sectors_per_track:      dw 18
-heads:                  dw 2
-hidden_sectors:         dd 0
-large_sectors:          dd 0
-
-; Extended BPB
-drive_number:           db 0
-reserved:               db 0
-boot_signature:         db 0x29
-volume_id:              dd 0x12345678
-volume_label:           db "NEIL OS    "
-filesystem:             db "FAT12   "
+OEMLabel            db "MSWIN4.1"   ; OEM Identifier
+BytesPerSector      dw 512          ; Bytes per sector
+SectorsPerCluster   db 1            ; Sectors per cluster
+ReservedSectors     dw 1            ; Reserved sectors (boot record)
+NumberofFATs        db 2            ; Number of FAT tables
+RootEntries         dw 224          ; Number of root directory entries
+TotalSectors        dw 2880         ; Total sectors (1.44MB)
+Media               db 0xf8         ; Media descriptor (fixed/floppy)
+SectorsPerFAT       dw 9            ; Sectors per FAT table
+SectorsPerTrack     dw 18           ; Sectors per track
+HeadsPerCylinder    dw 2            ; Number of magnetic heads
+HiddenSectors       dd 0            ; Hidden sectors
+TotalSectorsBig     dd 0            ; Large sector count (unused)
+DriveNumber         db 0            ; BIOS drive number (set by BIOS)
+CurrentFlags        db 0            ; Reserved/Flags
+BootSignature       db 0x29         ; Extended boot signature
+VolumeID            dd 0x1337c0de   ; Volume serial number
+VolumeLabel         db "NEIL OS    "; Volume label (11 bytes)
+FileSystem          db "FAT12   "   ; File system type (8 bytes)
 
 start:
     ; Bootloader code begins here
@@ -41,6 +40,16 @@ start:
     xor ax, ax
     mov ds, ax
     mov es, ax
+
+    ; Set up stack
+    mov ss, ax
+    mov sp, 0x7C00
+    sti
+
+    mov [DriveNumber], dl
+
+    mov si, msg_loading
+    call puts
 
     jmp main
 
@@ -95,18 +104,18 @@ puts:
 ;   AX, CX, DX.
 ;
 ; Formula:
-;   sector     = (LBA % sectors_per_track) + 1
-;   head       = (LBA / sectors_per_track) % heads
-;   cylinder   = (LBA / sectors_per_track) / heads
+;   sector     = (LBA % SectorsPerTrack) + 1
+;   head       = (LBA / SectorsPerTrack) % HeadsPerCylinder
+;   cylinder   = (LBA / SectorsPerTrack) / HeadsPerCylinder
 lba_to_chs:
     xor dx, dx
-    div word [sectors_per_track]    ; AX = (LBA / sectors_per_track), DX = (LBA % sectors_per_track)
+    div word [SectorsPerTrack]    ; AX = (LBA / SectorsPerTrack), DX = (LBA % SectorsPerTrack)
 
-    inc dl                          ; DX = (LBA % sectors_per_track) + 1
+    inc dl                          ; DX = (LBA % SectorsPerTrack) + 1
     mov cl, dl                      ; CL = DL = sector
 
     xor dx, dx                      ; DX = 0
-    div word [heads]                ; AX = (LBA / sectors_per_track) / heads = cylinder, DX = head
+    div word [HeadsPerCylinder]                ; AX = (LBA / SectorsPerTrack) / HeadsPerCylinder = cylinder, DX = head
 
     mov dh, dl                      ; DH = head
     mov ch, al                      ; cylinder low 8 bits
@@ -143,7 +152,7 @@ disk_read:
     call lba_to_chs          ; converts AX to CH, CL, DH
     pop ax                   ; restores the LBA for future retries
 
-    mov dl, [drive_number]   ; loads BIOS drive number
+    mov dl, [DriveNumber]   ; loads BIOS drive number
 
     mov ah, 02h              ; read sectors
     mov al, 1                ; sets the number of sectors
@@ -184,17 +193,8 @@ disk_reset:
 
 main:
 
-    ; Set up data segments
-    mov ax, 0
-    mov ds, ax
-    mov es, ax
-
-    ; Set up stack
-    mov ss, ax
-    mov sp, 0x7C00
-
     ; Get the drive number from BIOS through DL
-    mov [drive_number], dl
+    mov [DriveNumber], dl
 
     mov ax, 1
     mov cl, 1
@@ -225,6 +225,7 @@ wait_key_and_reboot:
 
 
 msg_hello:       db 'Hello, world!', ENDL, 0
+msg_loading:     db 'Loading...', ENDL, 0
 msg_read_failed: db 'Failed to read from disk!', ENDL, 0
 
 retry_cnt:      db 0
