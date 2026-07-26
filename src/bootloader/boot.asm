@@ -1,13 +1,20 @@
+; Stage 1 Bootloader
+
 org 0x7C00
 bits 16
 
 
 %define ENDL 0x0D, 0x0A
 
+%define STAGE2_SEGMENT      0x0800
+%define STAGE2_OFFSET       0x0000
+
+%define STAGE2_FIRST_LBA    1
+%define STAGE2_SECTORS      16
 
 ; FAT12 Boot Sector Header (BIOS Parameter Block)
-jmp short start          ; Jump over BPB
-nop   ; 8 bytes
+jmp short start          ; jumps over BPB
+nop                      ; 8 bytes
 
 ; BIOS Parameter Block
 OEMLabel            db "MSWIN4.1"   ; OEM Identifier
@@ -30,8 +37,10 @@ VolumeID            dd 0x1337c0de   ; Volume serial number
 VolumeLabel         db "NEIL OS    "; Volume label (11 bytes)
 FileSystem          db "FAT12   "   ; File system type (8 bytes)
 
+
+; Bootloader code begins here
 start:
-    ; Bootloader code begins here
+
     cli
 
     xor ax, ax
@@ -48,21 +57,13 @@ start:
     mov si, msg_loading
     call puts
 
-    jmp main
+    ; Load Stage 2
+    mov ax, STAGE2_SEGMENT
+    mov es, ax
+    xor bx, bx
 
-main:
-
-    ; Get the drive number from BIOS through DL
-    mov [DriveNumber], dl
-
-    mov ax, 1
-    mov cl, 1
-    mov bx, 0x7E00
-    call disk_read
-
-
-    cli
-    hlt
+    mov si, STAGE2_FIRST_LBA
+    mov cx, STAGE2_SECTORS
 
 ; puts:
 ;   Prints a null-terminated string to the screen using BIOS teletype output.
@@ -79,6 +80,7 @@ main:
 ; Preserves:
 ;   SI, AX are saved on entry and restored before returning.
 puts:
+
     push si
     push ax
 
@@ -119,6 +121,7 @@ puts:
 ;   head       = (LBA / SectorsPerTrack) % HeadsPerCylinder
 ;   cylinder   = (LBA / SectorsPerTrack) / HeadsPerCylinder
 lba_to_chs:
+
     xor dx, dx
     div word [SectorsPerTrack]    ; AX = (LBA / SectorsPerTrack), DX = (LBA % SectorsPerTrack)
 
@@ -154,11 +157,13 @@ lba_to_chs:
 ; Preserves:
 ;   All general purpose registers.
 disk_read:
+
     pusha
 
-    mov byte [retry_cnt], 3
+    mov byte [RetryCount], 3
 
 .retry:
+
     push ax                  ; saves the LBA
     call lba_to_chs          ; converts AX to CH, CL, DH
     pop ax                   ; restores the LBA for future retries
@@ -169,18 +174,19 @@ disk_read:
     mov al, 1                ; sets the number of sectors
     stc                      ; sets carry flag (CF)
     int 13h                  ; calls BIOS disk services
-    jnc .done                ; BIOS uses CF to report if the result is success
+    jnc .success             ; BIOS uses CF to report if the result is success
                              ; only jumps to the next line if failure
 
     call disk_reset
 
-    dec byte [retry_cnt]
+    dec byte [RetryCount]
     jnz .retry
 
     popa
-    jmp floppy_error
+    jmp disk_error
 
-.done:
+.success:
+
     popa
     ret
 
@@ -195,34 +201,34 @@ disk_read:
 disk_reset:
 
     pusha
-    mov ah, 0   ; resets disk system
+
+    mov ah, 0           ; resets disk system
+    mov dl, [BootDrive] ; loads BootDrive
     stc
     int 13h
 
     popa
     ret
 
-floppy_error:
-    mov si, msg_read_failed
+disk_error:
+
+    mov si, msg_error
     call puts
-    jmp wait_key_and_reboot
 
-wait_key_and_reboot:
-    mov ah, 0
-    int 16h             ; waits for keypress
-    jmp 0FFFFh:0000h    ; jumps to the beginning of BIOS
-    hlt
+.wait
 
-.halt:
-    cli             ; disables interrupt
-    hlt
+    xor ah, ah
+    int 16h
 
+    jmp 0xFFFF:0x0
 
-msg_hello:       db 'Hello, world!', ENDL, 0
-msg_loading:     db 'Loading...', ENDL, 0
-msg_read_failed: db 'Failed to read from disk!', ENDL, 0
+; Data
+BootDrive      db 0
+RetryCount     db 0
 
-retry_cnt:      db 0
+msg_loading    db "Loading Stage2...", ENDL,0
+msg_done       db "OK",                ENDL,0
+msg_error      db "Disk Read Error",   ENDL,0
 
 times 510-($-$$) db 0
 dw 0AA55h
