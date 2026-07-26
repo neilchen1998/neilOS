@@ -7,10 +7,7 @@ bits 16
 
 ; FAT12 Boot Sector Header (BIOS Parameter Block)
 jmp short start          ; Jump over BPB
-nop
-
-; OEM Identifier
-db "MSWIN4.1"            ; 8 bytes
+nop   ; 8 bytes
 
 ; BIOS Parameter Block
 OEMLabel            db "MSWIN4.1"   ; OEM Identifier
@@ -52,6 +49,20 @@ start:
     call puts
 
     jmp main
+
+main:
+
+    ; Get the drive number from BIOS through DL
+    mov [DriveNumber], dl
+
+    mov ax, 1
+    mov cl, 1
+    mov bx, 0x7E00
+    call disk_read
+
+
+    cli
+    hlt
 
 ; puts:
 ;   Prints a null-terminated string to the screen using BIOS teletype output.
@@ -190,23 +201,6 @@ disk_reset:
 
     popa
     ret
-
-main:
-
-    ; Get the drive number from BIOS through DL
-    mov [DriveNumber], dl
-
-    mov ax, 1
-    mov cl, 1
-    mov bx, 0x7E00
-    call disk_read
-
-    ; Print msg
-    mov si, msg_hello
-    call puts
-
-    cli
-    hlt
 
 floppy_error:
     mov si, msg_read_failed
