@@ -1,7 +1,4 @@
-# =====================
 # Configuration
-# =====================
-
 ASM := nasm
 CC  := gcc
 
@@ -20,21 +17,12 @@ IMAGE      := $(BUILD_DIR)/main_floppy.img
 FAT_TOOL   := $(BUILD_DIR)/tools/fat
 
 
-# =====================
 # Default target
-# =====================
-
-.PHONY: all
-all: image tools
+all: image
 
 
-# =====================
 # Disk image
-# =====================
-
-.PHONY: image
-
-image: $(IMAGE)
+image: boot kernel
 
 $(IMAGE): $(BOOTLOADER) $(KERNEL)
 	mkdir -p $(BUILD_DIR)
@@ -44,64 +32,40 @@ $(IMAGE): $(BOOTLOADER) $(KERNEL)
 	mcopy -i $@ $(KERNEL) "::kernel"
 
 
-# =====================
 # Bootloader
-# =====================
+boot: stage1
 
-.PHONY: bootloader
+stage1:
+	$(MAKE) -C boot/stage1
 
-bootloader: $(BOOTLOADER)
-
-$(BOOTLOADER): $(SRC_DIR)/bootloader/boot.asm
-	mkdir -p $(BUILD_DIR)
-	$(ASM) $< -f bin -o $@
+stage2:
+	$(MAKE) -C boot/stage2
 
 
-# =====================
 # Kernel
-# =====================
-
-.PHONY: kernel
-
 kernel: $(KERNEL)
 
-$(KERNEL): $(SRC_DIR)/kernel/main.asm
+$(KERNEL): kernel/main.asm
 	mkdir -p $(BUILD_DIR)
 	$(ASM) $< -f bin -o $@
 
 
-# =====================
-# Host tools
-# =====================
-
-.PHONY: tools
-
-tools: $(FAT_TOOL)
-
-$(FAT_TOOL): $(TOOLS_DIR)/fat/fat.c $(TOOLS_DIR)/fat/fat.h
-	mkdir -p $(BUILD_DIR)/tools
-	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $@
-
-$(FAT_TOOL).s: $(TOOLS_DIR)/fat/fat.c
-	mkdir -p $(BUILD_DIR)/tools
-	$(CC) $(CFLAGS) -S $< -o $@
-
-
-# =====================
 # Development helpers
-# =====================
-
 .PHONY: run
 
 run: image
 	qemu-system-i386 -fda $(IMAGE)
 
+debug: image
+	qemu-system-i386 -fda $(IMAGE) \
+	-drive format=raw,file=$(BUILD_DIR)/os.img -s -S
 
-# =====================
+
 # Cleanup
-# =====================
-
-.PHONY: clean
+.PHONY: all image boot stage1 stage2 kernel tools run debug clean
 
 clean:
 	rm -rf $(BUILD_DIR)
+	$(MAKE) -C boot/stage1 clean
+	$(MAKE) -C boot/stage2 clean
+	$(MAKE) -C kernel clean
