@@ -5,6 +5,11 @@
 ASM := nasm
 CC  := gcc
 
+CFLAGS   := -Wall -Wextra -g
+CPPFLAGS := -I$(TOOLS_DIR)/fat
+LDFLAGS  :=
+LDLIBS   :=
+
 SRC_DIR   := src
 BUILD_DIR := build
 TOOLS_DIR := tools
@@ -73,9 +78,9 @@ $(KERNEL): $(SRC_DIR)/kernel/main.asm
 
 tools: $(FAT_TOOL)
 
-$(FAT_TOOL): $(TOOLS_DIR)/fat/fat.c
+$(FAT_TOOL): $(TOOLS_DIR)/fat/fat.c $(TOOLS_DIR)/fat/fat.h
 	mkdir -p $(BUILD_DIR)/tools
-	$(CC) -Wall -Wextra -g $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 
 # =====================
