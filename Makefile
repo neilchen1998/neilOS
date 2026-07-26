@@ -1,42 +1,98 @@
+# =====================
+# Configuration
+# =====================
+
 ASM := nasm
 CC  := gcc
 
-BUILD_DIR := build
 SRC_DIR   := src
+BUILD_DIR := build
 TOOLS_DIR := tools
 
-.PHONY: all floppy_image bootloader kernel tools_fat clean always
+BOOTLOADER := $(BUILD_DIR)/bootloader.bin
+KERNEL     := $(BUILD_DIR)/kernel.bin
+IMAGE      := $(BUILD_DIR)/main_floppy.img
+FAT_TOOL   := $(BUILD_DIR)/tools/fat
 
-all: floppy_image tools_fat
 
-# Floppy
-floppy_image: $(BUILD_DIR)/main_floppy.img
+# =====================
+# Default target
+# =====================
 
-$(BUILD_DIR)/main_floppy.img: bootloader kernel
-	dd if=/dev/zero of=$(BUILD_DIR)/main_floppy.img bs=512  count=2880
-	mkfs.fat -F 12 -n "DUMMY" $(BUILD_DIR)/main_floppy.img
-	dd if=$(BUILD_DIR)/bootloader.bin of=$(BUILD_DIR)/main_floppy.img conv=notrunc
-	mcopy -i $(BUILD_DIR)/main_floppy.img $(BUILD_DIR)/kernel.bin "::kernel"
+.PHONY: all
+all: image tools
 
+
+# =====================
+# Disk image
+# =====================
+
+.PHONY: image
+
+image: $(IMAGE)
+
+$(IMAGE): $(BOOTLOADER) $(KERNEL)
+	mkdir -p $(BUILD_DIR)
+	dd if=/dev/zero of=$@ bs=512 count=2880
+	mkfs.fat -F 12 -n "DUMMY" $@
+	dd if=$(BOOTLOADER) of=$@ conv=notrunc
+	mcopy -i $@ $(KERNEL) "::kernel"
+
+
+# =====================
 # Bootloader
-bootloader: $(BUILD_DIR)/bootloader.bin
+# =====================
 
-$(BUILD_DIR)/bootloader.bin: always
-	$(ASM) $(SRC_DIR)/bootloader/boot.asm -f bin -o $(BUILD_DIR)/bootloader.bin
+.PHONY: bootloader
 
+bootloader: $(BOOTLOADER)
+
+$(BOOTLOADER): $(SRC_DIR)/bootloader/boot.asm
+	mkdir -p $(BUILD_DIR)
+	$(ASM) $< -f bin -o $@
+
+
+# =====================
 # Kernel
-kernel: $(BUILD_DIR)/kernel.bin
+# =====================
 
-$(BUILD_DIR)/kernel.bin: always
-	$(ASM) $(SRC_DIR)/kernel/main.asm -f bin -o $(BUILD_DIR)/kernel.bin
+.PHONY: kernel
 
-tools_fat: $(BUILD_DIR)/tools/fat
-$(BUILD_DIR)/tools/fat: $(TOOLS_DIR)/fat/fat.c
+kernel: $(KERNEL)
+
+$(KERNEL): $(SRC_DIR)/kernel/main.asm
+	mkdir -p $(BUILD_DIR)
+	$(ASM) $< -f bin -o $@
+
+
+# =====================
+# Host tools
+# =====================
+
+.PHONY: tools
+
+tools: $(FAT_TOOL)
+
+$(FAT_TOOL): $(TOOLS_DIR)/fat/fat.c
 	mkdir -p $(BUILD_DIR)/tools
-	$(CC) -g -o $@ $<
+	$(CC) -Wall -Wextra -g $< -o $@
 
-always:
-	@mkdir -p $(BUILD_DIR)
+
+# =====================
+# Development helpers
+# =====================
+
+.PHONY: run
+
+run: image
+	qemu-system-i386 -fda $(IMAGE)
+
+
+# =====================
+# Cleanup
+# =====================
+
+.PHONY: clean
 
 clean:
 	rm -rf $(BUILD_DIR)
