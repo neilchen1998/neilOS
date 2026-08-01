@@ -107,7 +107,7 @@ static int vprintf(const char* fmt, va_list args)
 {
     int cnt = 0;
 
-    while (*fmt != '\n')
+    while (*fmt != '\0')
     {
         if (*fmt != '%')
         {
@@ -140,7 +140,7 @@ static int vprintf(const char* fmt, va_list args)
                     txt = "(null)";
                 }
 
-                while (*txt != '\n')
+                while (*txt != '\0')
                 {
                     cnt += (putchar(*txt++) >= 0) ? 1 : 0;
                 }
@@ -149,7 +149,7 @@ static int vprintf(const char* fmt, va_list args)
             case 'd':
             case 'i':
             {
-                cnt += (print_signed(va_arg(args, int)) >= 0) ? 1 : 0;
+                cnt += print_signed(va_arg(args, int));
                 break;
             }
             case 'u':
@@ -169,6 +169,8 @@ static int vprintf(const char* fmt, va_list args)
                 break;
             }
         }
+
+        ++fmt;
     }
 
     return cnt;
@@ -190,5 +192,5 @@ void stage2_main(void)
 {
     bios_print("stage2_main reached!\n");
 
-    printf("I can print with printf: %s %c %8 0x%x\r\n", "OK", '!', 2u, 2u);
+    printf("I can print with printf: %s %c %u 0x%x\r\n", "OK", '!', 42u, 42u);
 }
