@@ -33,6 +33,12 @@ static void bios_print_char(char c)
 // @param ch The character to print.
 static int putchar(int ch)
 {
+    // Put the cursor back to column 0 if the input character is a newline (EOL)
+    if (ch == '\n')
+    {
+        bios_print_char('\r');
+    }
+
     bios_print_char((unsigned char)ch);
 
     return (unsigned char)ch;
@@ -48,7 +54,7 @@ static void bios_print(const char* str)
 {
     while (*str != '\0')
     {
-        bios_print_char(*str++);
+        putchar((unsigned char)*str++);
     }
 }
 
