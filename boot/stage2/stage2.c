@@ -33,6 +33,12 @@ static void bios_print_char(char c)
 // @param ch The character to print.
 static int putchar(int ch)
 {
+    // Put the cursor back to column 0 if the input character is a newline (EOL)
+    if (ch == '\n')
+    {
+        bios_print_char('\r');
+    }
+
     bios_print_char((unsigned char)ch);
 
     return (unsigned char)ch;
@@ -48,7 +54,7 @@ static void bios_print(const char* str)
 {
     while (*str != '\0')
     {
-        bios_print_char(*str++);
+        putchar((unsigned char)*str++);
     }
 }
 
@@ -103,19 +109,26 @@ static int print_signed(int value)
     return cnt + print_unsigned(mag, 10u);
 }
 
+// @brief Formats and prints a variadic argument list to the BIOS teletype output.
+// @param fmt Null-terminated format string.
+// @param args Variadic argument list matching the format string.
+// @return Numbers of printed characters.
 static int vprintf(const char* fmt, va_list args)
 {
     int cnt = 0;
 
-    while (*fmt != '\n')
+    while (*fmt != '\0')
     {
+        // Ordinary characters are written directly
         if (*fmt != '%')
         {
             cnt += (putchar(*fmt++) >= 0) ? 1 : 0;
             continue;
         }
 
+        // Skip the '%' character and check the format specifier
         ++fmt;
+
         switch (*fmt)
         {
             case '\0':
@@ -134,22 +147,22 @@ static int vprintf(const char* fmt, va_list args)
             }
             case 's':
             {
-                const char *txt = va_arg(args, const char*);
-                if (txt == 0)
+                const char *str = va_arg(args, const char*);
+                if (str == 0)
                 {
-                    txt = "(null)";
+                    str = "(null)";
                 }
 
-                while (*txt != '\n')
+                while (*str != '\0')
                 {
-                    cnt += (putchar(*txt++) >= 0) ? 1 : 0;
+                    cnt += (putchar(*str++) >= 0) ? 1 : 0;
                 }
                 break;
             }
             case 'd':
             case 'i':
             {
-                cnt += (print_signed(va_arg(args, int)) >= 0) ? 1 : 0;
+                cnt += print_signed(va_arg(args, int));
                 break;
             }
             case 'u':
@@ -165,10 +178,13 @@ static int vprintf(const char* fmt, va_list args)
             default:
             {
                 cnt += (putchar('%') >= 0) ? 1 : 0;
-                cnt += (putchar(*fmt++) >= 0) ? 1 : 0;
+                cnt += (putchar(*fmt) >= 0) ? 1 : 0;
                 break;
             }
         }
+
+        // Advance to the next character in the format string
+        ++fmt;
     }
 
     return cnt;
@@ -190,5 +206,5 @@ void stage2_main(void)
 {
     bios_print("stage2_main reached!\n");
 
-    printf("I can print with printf: %s %c %8 0x%x\r\n", "OK", '!', 2u, 2u);
+    printf("I can print with printf: %s %c %u 0x%x\r\n", "OK", '!', 42u, 42u);
 }
