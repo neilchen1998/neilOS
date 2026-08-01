@@ -63,8 +63,17 @@ start:
     mov es, ax
     xor bx, bx
 
-    mov si, STAGE2_FIRST_LBA
-    mov cx, STAGE2_SECTORS
+    mov ah, 0x2
+    mov al, STAGE2_SECTORS
+    mov ch, 0
+    mov cl, 2
+    mov dh, 0
+    mov dl, [DriveNumber]
+
+    int 0x13
+    jc disk_error
+
+    jmp STAGE2_SEGMENT:STAGE2_OFFSET
 
 ; puts:
 ;   Prints a null-terminated string to the screen using BIOS teletype output.
