@@ -109,6 +109,10 @@ static int print_signed(int value)
     return cnt + print_unsigned(mag, 10u);
 }
 
+// @brief Formats and prints a variadic argument list to the BIOS teletype output.
+// @param fmt Null-terminated format string.
+// @param args Variadic argument list matching the format string.
+// @return Numbers of printed characters.
 static int vprintf(const char* fmt, va_list args)
 {
     int cnt = 0;
@@ -171,7 +175,7 @@ static int vprintf(const char* fmt, va_list args)
             default:
             {
                 cnt += (putchar('%') >= 0) ? 1 : 0;
-                cnt += (putchar(*fmt++) >= 0) ? 1 : 0;
+                cnt += (putchar(*fmt) >= 0) ? 1 : 0;
                 break;
             }
         }
