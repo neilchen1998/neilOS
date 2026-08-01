@@ -119,13 +119,16 @@ static int vprintf(const char* fmt, va_list args)
 
     while (*fmt != '\0')
     {
+        // Ordinary characters are written directly
         if (*fmt != '%')
         {
             cnt += (putchar(*fmt++) >= 0) ? 1 : 0;
             continue;
         }
 
+        // Skip the '%' character and check the format specifier
         ++fmt;
+
         switch (*fmt)
         {
             case '\0':
@@ -144,15 +147,15 @@ static int vprintf(const char* fmt, va_list args)
             }
             case 's':
             {
-                const char *txt = va_arg(args, const char*);
-                if (txt == 0)
+                const char *str = va_arg(args, const char*);
+                if (str == 0)
                 {
-                    txt = "(null)";
+                    str = "(null)";
                 }
 
-                while (*txt != '\0')
+                while (*str != '\0')
                 {
-                    cnt += (putchar(*txt++) >= 0) ? 1 : 0;
+                    cnt += (putchar(*str++) >= 0) ? 1 : 0;
                 }
                 break;
             }
@@ -180,6 +183,7 @@ static int vprintf(const char* fmt, va_list args)
             }
         }
 
+        // Advance to the next character in the format string
         ++fmt;
     }
 
