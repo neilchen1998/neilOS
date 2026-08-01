@@ -12,6 +12,7 @@ _start:
     mov ds, ax
     mov es, ax
     mov ss, ax
+    xor esp, esp
     mov sp, 0xFFFE
 
     sti
