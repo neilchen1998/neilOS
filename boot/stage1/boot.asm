@@ -10,7 +10,7 @@ bits 16
 %define STAGE2_SEGMENT      0x0800
 %define STAGE2_OFFSET       0x0000
 
-%define STAGE2_FIRST_LBA    1
+%define STAGE2_FIRST_LBA    2864
 %define STAGE2_SECTORS      16
 
 ; FAT12 Boot Sector Header (BIOS Parameter Block)
@@ -59,15 +59,14 @@ start:
     call puts
 
     ; Load Stage 2
+    mov ax, STAGE2_FIRST_LBA
+    call lba_to_chs
     mov ax, STAGE2_SEGMENT
     mov es, ax
     xor bx, bx
 
     mov ah, 0x2
     mov al, STAGE2_SECTORS
-    mov ch, 0
-    mov cl, 2
-    mov dh, 0
     mov dl, [DriveNumber]
 
     int 0x13
@@ -236,7 +235,7 @@ disk_error:
 BootDrive      db 0
 RetryCount     db 0
 
-msg_loading    db "Loading Stage2...", ENDL,0
+msg_loading    db "Loading Stage 2...", ENDL,0
 msg_done       db "OK",                ENDL,0
 msg_error      db "Disk Read Error",   ENDL,0
 

@@ -31,7 +31,7 @@ $(IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_BIN)
 	dd if=$(STAGE1_BIN) of=$@ bs=512 count=1 conv=notrunc
 
 	@echo "Installing stage2"
-	mcopy -i $@ $(STAGE2_BIN) "::stage2"
+	dd if=$(STAGE2_BIN) of=$@ bs=512 seek=2864 conv=notrunc
 
 	@echo "Installing kernel"
 	mcopy -i $@ $(KERNEL_BIN) "::kernel"
