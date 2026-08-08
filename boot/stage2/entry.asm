@@ -3,8 +3,10 @@
 global _start
 global jump_to_kernel
 extern stage2_main
+extern g_drive
 
 %define KERNEL_ENTRY 0x9000
+%define STAGE2_BASE  0x5000
 %define CODE_SEL     0x08
 %define DATA_SEL     0x10
 
@@ -18,9 +20,11 @@ _start:
     mov es, ax
     mov ss, ax
     xor esp, esp
-    mov sp, 0xFFFE
+    mov esp, 0x9E000
 
     sti
+
+    mov [g_drive], dl
 
     push dx
     mov si, message
@@ -28,9 +32,9 @@ _start:
     pop dx
 
     movzx eax, dl
-    push  eax
-    o32   call stage2_main
-    add   esp, 4
+    push eax
+    o32 call stage2_main
+    add esp, 4
 
 hang:
     cli
@@ -56,7 +60,7 @@ jump_to_kernel:
     or  eax, 0x01
     mov cr0, eax
 
-    jmp CODE_SEL:protected_mode_entry
+    jmp CODE_SEL:(STAGE2_BASE + protected_mode_entry)
 
 [BITS 32]
 protected_mode_entry:
@@ -69,7 +73,8 @@ protected_mode_entry:
     mov ss, ax
     mov esp, 0x9F000
 
-    jmp KERNEL_ENTRY
+    mov eax, KERNEL_ENTRY
+    jmp eax
 
 
 [BITS 16]
@@ -96,4 +101,4 @@ gdt_end:
 
 gdt_descriptor:
     dw gdt_end - gdt_start - 1
-    dd gdt_start
+    dd STAGE2_BASE + gdt_start

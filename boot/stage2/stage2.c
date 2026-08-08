@@ -352,14 +352,14 @@ void debug_dump_root_dir(void)
     }
 }
 
-void stage2_main(uint8_t drive)
+void stage2_main(void)
 {
     bios_print("stage2_main reached!\n");
 
     uint16_t cluster;
     uint32_t fileSize;
 
-    if (fat_init(drive) != 0)
+    if (fat_init(g_drive) != 0)
     {
         bios_print("ERROR: FAT init failed!\n");
         for (;;)
