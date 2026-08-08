@@ -128,10 +128,37 @@ $(STAGE2_BIN): $(STAGE2_DIR)/stage2.elf
 
 
 # Kernel
-$(KERNEL_BIN): kernel/main.asm
-	@mkdir -p $(dir $@)
+KERNEL_DIR := $(BUILD)/kernel
 
-	$(ASM) -f bin $< -o $@
+KERNEL_ASM := kernel/main.asm
+KERNEL_C   := kernel/kernel.c
+KERNEL_LD  := kernel/linker.ld
+
+KERNEL_OBJ   := $(KERNEL_DIR)/main.o
+KERNEL_C_OBJ := $(KERNEL_DIR)/kernel.o
+KERNEL_ELF   := $(KERNEL_DIR)/kernel.elf
+KERNEL_BIN   := $(KERNEL_DIR)/kernel.bin
+
+$(KERNEL_OBJ): $(KERNEL_ASM)
+	@mkdir -p $(dir $@)
+	$(ASM) -f elf32 $< -o $@
+
+$(KERNEL_C_OBJ): $(KERNEL_C)
+	@mkdir -p $(dir $@)
+	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c $< -o $@
+
+$(KERNEL_ELF): $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_LD)
+	@mkdir -p $(dir $@)
+	$(LD) \
+		-m elf_i386 \
+		-T $(KERNEL_LD) \
+		-o $@ \
+		$(KERNEL_OBJ) \
+		$(KERNEL_C_OBJ)
+
+$(KERNEL_BIN): $(KERNEL_ELF)
+	@mkdir -p $(dir $@)
+	$(OBJCOPY) -O binary $< $@
 
 
 # Development
