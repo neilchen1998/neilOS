@@ -7,7 +7,7 @@ bits 16
 
 %define ENDL 0x0D, 0x0A
 
-%define STAGE2_SEGMENT      0x0800
+%define STAGE2_SEGMENT      0x0500
 %define STAGE2_OFFSET       0x0000
 
 %define STAGE2_FIRST_LBA    2864
@@ -52,6 +52,7 @@ start:
     mov ss, ax
     mov sp, 0x7C00
     sti
+    cld
 
     mov [DriveNumber], dl
 
@@ -72,6 +73,7 @@ start:
     int 0x13
     jc disk_error
 
+    mov dl, [DriveNumber]
     jmp STAGE2_SEGMENT:STAGE2_OFFSET
 
 ; puts:
@@ -92,6 +94,7 @@ puts:
 
     push si
     push ax
+    cld
 
 .loop:
     lodsb           ; loads one byte from DS:SI into AL
@@ -211,8 +214,8 @@ disk_reset:
 
     pusha
 
-    mov ah, 0           ; resets disk system
-    mov dl, [BootDrive] ; loads BootDrive
+    mov ah, 0               ; resets disk system
+    mov dl, [DriveNumber]
     stc
     int 13h
 

@@ -74,6 +74,25 @@ make debug
 
 ## Note
 
+### cdecl
+
+On 32-bit x86, the most common C calling convention is cdecl.
+Under cdecl, registers are divided into caller-saved and callee-saved.
+
+Caller-saved (volatile) registers:
+
+- EAX
+- ECX
+- EDX
+
+Callee-saved (non-volatile) registers:
+
+- EBX
+- ESI
+- EDI
+- EBP
+- ESP
+
 ### Registers
 
 - **AX**: accumulator (general purpose calculation)
@@ -88,4 +107,5 @@ make debug
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)
+- [cdecl](https://linux.die.net/man/1/cdecl)
 - [Understanding the FAT file system](https://8dcc.github.io/programming/understanding-fat.html)

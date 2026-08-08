@@ -61,6 +61,11 @@ $(STAGE2_DIR)/entry.o: boot/stage2/entry.asm
 
 	$(ASM) -f elf32 $< -o $@
 
+$(STAGE2_DIR)/disk.o: boot/stage2/disk.asm
+	@mkdir -p $(dir $@)
+
+	$(ASM) -f elf32 $< -o $@
+
 $(STAGE2_DIR)/stage2.o: boot/stage2/stage2.c
 	@mkdir -p $(dir $@)
 
@@ -70,23 +75,56 @@ $(STAGE2_DIR)/stage2.o: boot/stage2/stage2.c
 		-fno-pic \
 		-fno-stack-protector \
 		-fno-asynchronous-unwind-tables \
+		-Iboot/stage2/lib \
 		-Wall \
 		-c $< \
 		-o $@
 
+# Lib archive
+STAGE2_LIB_SRC := $(wildcard boot/stage2/lib/*.c)
+STAGE2_LIB_OBJ := $(patsubst %.c,$(STAGE2_DIR)/%.o,$(notdir $(STAGE2_LIB_SRC)))
 
-$(STAGE2_DIR)/stage2.elf: $(STAGE2_DIR)/entry.o $(STAGE2_DIR)/stage2.o boot/stage2/linker.ld
+$(STAGE2_DIR)/lib.a: $(STAGE2_LIB_SRC)
+	@mkdir -p $(dir $@)
+
+	$(foreach src,$(STAGE2_LIB_SRC), \
+		$(CC) \
+			-m16 \
+			-ffreestanding \
+			-fno-pic \
+			-fno-stack-protector \
+			-fno-asynchronous-unwind-tables \
+			-ffunction-sections \
+			-fdata-sections \
+			-Iboot/stage2/lib \
+			-Wall \
+			-c $(src) \
+			-o $(STAGE2_DIR)/$(notdir $(src:.c=.o)); \
+	)
+
+	ar rcs $@ $(STAGE2_LIB_OBJ)
+
+
+$(STAGE2_DIR)/stage2.elf: $(STAGE2_DIR)/entry.o $(STAGE2_DIR)/stage2.o $(STAGE2_DIR)/disk.o $(STAGE2_DIR)/lib.a boot/stage2/linker.ld
 
 	$(LD) \
 		-m elf_i386 \
 		-T boot/stage2/linker.ld \
 		-o $@ \
+		$(STAGE2_DIR)/disk.o \
 		$(STAGE2_DIR)/entry.o \
-		$(STAGE2_DIR)/stage2.o
+		$(STAGE2_DIR)/stage2.o \
+		$(STAGE2_DIR)/lib.a
 
 
 $(STAGE2_BIN): $(STAGE2_DIR)/stage2.elf
 	$(OBJCOPY) -O binary $< $@
+
+	@size=$$(stat -c%s $@); \
+	if [ $$size -gt 8192 ]; then \
+		echo "Stage 2 is too large ($$size bytes): Stage 1 only loads 16 sectors"; \
+		exit 1; \
+	fi
 
 
 # Kernel
@@ -98,7 +136,7 @@ $(KERNEL_BIN): kernel/main.asm
 
 # Development
 run: image
-	qemu-system-i386 -fda $(IMAGE)
+	qemu-system-i386 -fda $(IMAGE) -serial stdio
 
 debug: image
 	qemu-system-i386 -fda $(IMAGE) -s -S
