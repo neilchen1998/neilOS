@@ -145,7 +145,7 @@ $(KERNEL_OBJ): $(KERNEL_ASM)
 
 $(KERNEL_C_OBJ): $(KERNEL_C)
 	@mkdir -p $(dir $@)
-	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -c $< -o $@
+	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -c $< -o $@
 
 $(KERNEL_ELF): $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_LD)
 	@mkdir -p $(dir $@)

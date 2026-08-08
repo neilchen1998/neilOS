@@ -1,6 +1,7 @@
 bits 32
 
-%define COM1 0x03F8
+%define COM1     0x03F8
+%define DATA_SEL 0x10
 
 section .text
 
@@ -11,9 +12,11 @@ extern kmain
 _start:
     cli
 
-    mov ax, cs
+    mov ax, DATA_SEL
     mov ds, ax
     mov es, ax
+    mov fs, ax
+    mov gs, ax
     mov ss, ax
     mov esp, 0xFFFE
 

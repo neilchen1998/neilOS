@@ -108,4 +108,5 @@ Callee-saved (non-volatile) registers:
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)
 - [cdecl](https://linux.die.net/man/1/cdecl)
+- [GDT](https://www.youtube.com/watch?v=Wh5nPn2U_1w)
 - [Understanding the FAT file system](https://8dcc.github.io/programming/understanding-fat.html)

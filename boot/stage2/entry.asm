@@ -4,6 +4,10 @@ global _start
 global jump_to_kernel
 extern stage2_main
 
+%define KERNEL_ENTRY 0x9000
+%define CODE_SEL     0x08
+%define DATA_SEL     0x10
+
 section .text.entry
 
 _start:
@@ -44,14 +48,31 @@ hang:
 ;   All general purpose registers.
 jump_to_kernel:
 
-    mov ax, ds          ; copies the current data segment into AX
-    add ax, 0x0400      ; adds 0x400 paragraphs (0x4000 bytes) to AX
-    push ax
-    push word 0x0000    ; places the destination offset on the stack
+    cli
 
-    retf
+    lgdt [gdt_descriptor]
+
+    mov eax, cr0
+    or  eax, 0x01
+    mov cr0, eax
+
+    jmp CODE_SEL:protected_mode_entry
+
+[BITS 32]
+protected_mode_entry:
+
+    mov ax, DATA_SEL
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp, 0x9F000
+
+    jmp KERNEL_ENTRY
 
 
+[BITS 16]
 puts:
     cld
     lodsb
@@ -65,3 +86,14 @@ puts:
     ret
 
 message db "Stage 2 reached!",13,10,0
+
+align 8
+gdt_start:
+    dq 0x0000000000000000
+    dq 0x00CF9A000000FFFF
+    dq 0x00CF92000000FFFF
+gdt_end:
+
+gdt_descriptor:
+    dw gdt_end - gdt_start - 1
+    dd gdt_start
