@@ -104,9 +104,31 @@ Callee-saved (non-volatile) registers:
 - **SI**: source index (points to source data)
 - **SP**: stack pointer (points to the top of the stack)
 
+### Registers (32-bit x86 protected mode)
+
+- **DS**:	data segment selector
+- **ES**:	extra segment selector
+- **FS**:	segment selector
+- **GS**:	segment selector
+- **SS**:	stack segment selector
+
+### Line control register
+
+| Bits | Name         | Access | Description |
+|------|--------------|--------|-------------|
+| 31-8 | Reserved     | N/A    | Reserved |
+| 7    | DLAB         | R/W    | 1 = Allows access to the Divisor Latch Registers and reading of the FIFO Control Register. 0 = Allows access to RBR, THR, IER and IIR registers. |
+| 6    | Set Break    | R/W    | 1 = Enables break condition. 0 = Disables break condition. |
+| 5    | Stick Parity | R/W    | 1 = Enables Stick Parity. 0 = Disables Stick Parity. |
+| 4    | EPS          | R/W    | 1 = Selects Even parity. 0 = Selects Odd parity. |
+| 3    | PEN          | R/W    | 1 = Enables parity. 0 = Disables parity. |
+| 2    | STB          | R/W    | 0 = 1 Stop bit. 1 = 2 Stop bits or 1.5, if 5 bits/character selected. |
+| 1-0  | WLS          | R/W    | 00 = 5 bits/character. 01 = 6 bits/character. 10 = 7 bits/character. 11 = 8 bits/character. |
+
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)
 - [cdecl](https://linux.die.net/man/1/cdecl)
 - [GDT](https://www.youtube.com/watch?v=Wh5nPn2U_1w)
+- [Line Control Register](https://docs.amd.com/r/en-US/pg143-axi-uart16550/Line-Control-Register)
 - [Understanding the FAT file system](https://8dcc.github.io/programming/understanding-fat.html)

@@ -19,8 +19,8 @@ _start:
     mov ds, ax
     mov es, ax
     mov ss, ax
-    xor esp, esp
-    mov esp, 0x9E000
+
+    mov sp, 0xFFFE
 
     sti
 
@@ -31,10 +31,8 @@ _start:
     call puts
     pop dx
 
-    movzx eax, dl
-    push eax
-    o32 call stage2_main
-    add esp, 4
+    call stage2_main
+
 
 hang:
     cli
@@ -72,6 +70,8 @@ protected_mode_entry:
     mov gs, ax
     mov ss, ax
     mov esp, 0x9F000
+
+    mov word [0xB8000], 0x0F50
 
     mov eax, KERNEL_ENTRY
     jmp eax
