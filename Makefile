@@ -132,39 +132,37 @@ KERNEL_DIR := $(BUILD)/kernel
 
 KERNEL_ASM := kernel/main.asm
 KERNEL_C   := kernel/kernel.c
-KERNEL_VGA := kernel/drivers/video/vga.c
+KERNEL_IDT := kernel/arch/x86/idt.c
 KERNEL_LD  := kernel/linker.ld
+KERNEL_VGA := kernel/drivers/video/vga.c
 
 KERNEL_OBJ     := $(KERNEL_DIR)/main.o
 KERNEL_C_OBJ   := $(KERNEL_DIR)/kernel.o
 KERNEL_VGA_OBJ := $(KERNEL_DIR)/drivers/video/vga.o
 
-KERNEL_ELF   := $(KERNEL_DIR)/kernel.elf
-KERNEL_BIN   := $(KERNEL_DIR)/kernel.bin
+KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_VGA_OBJ)
+
+KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
+KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
+
+KERNEL_CFLAGS  := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel
+KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
 
 
 $(KERNEL_OBJ): $(KERNEL_ASM)
-	@mkdir -p $(dir $@)
+	@mkdir -p $(@D)
 	$(ASM) -f elf32 $< -o $@
 
-$(KERNEL_C_OBJ): $(KERNEL_C)
-	@mkdir -p $(dir $@)
-	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -c $< -o $@
+$(KERNEL_DIR)/%.o: kernel/%.c
+	@mkdir -p $(@D)
+	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
 
-$(KERNEL_VGA_OBJ): $(KERNEL_VGA)
-	@mkdir -p $(dir $@)
-	$(CC) -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel -c $< -o $@
-
-$(KERNEL_ELF): $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_LD) $(KERNEL_VGA_OBJ)
-	@mkdir -p $(dir $@)
-	$(LD) \
-		-m elf_i386 \
-		-T $(KERNEL_LD) \
-		-o $@ \
-		$(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_VGA_OBJ)
+$(KERNEL_ELF): $(KERNEL_OBJS) $(KERNEL_LD)
+	@mkdir -p $(@D)
+	$(LD) $(KERNEL_LDFLAGS) -o $@ $(KERNEL_OBJS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
-	@mkdir -p $(dir $@)
+	@mkdir -p $(@D)
 	$(OBJCOPY) -O binary $< $@
 
 
