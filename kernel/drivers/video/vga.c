@@ -86,7 +86,7 @@ static void terminal_follow_cursor(void)
     }
 }
 
-static void terminal_putchar(char c)
+void terminal_putchar(char c)
 {
     switch (c)
     {

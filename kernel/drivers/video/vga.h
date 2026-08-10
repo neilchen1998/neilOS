@@ -8,6 +8,10 @@ void terminal_clear(void);
 
 /// @brief Writes a null-terminated string to the terminal.
 /// @param str The string to write.
+void terminal_putchar(char c);
+
+/// @brief Writes a null-terminated string to the terminal.
+/// @param str The string to write.
 void terminal_write(const char *str);
 
 /// @brief Scrolls up the terminal viewport by one line.
