@@ -133,14 +133,17 @@ KERNEL_DIR := $(BUILD)/kernel
 KERNEL_ASM := kernel/main.asm
 KERNEL_C   := kernel/kernel.c
 KERNEL_IDT := kernel/arch/x86/idt.c
+KERNEL_ISR := kernel/arch/x86/isr.asm
 KERNEL_LD  := kernel/linker.ld
 KERNEL_VGA := kernel/drivers/video/vga.c
 
 KERNEL_OBJ     := $(KERNEL_DIR)/main.o
 KERNEL_C_OBJ   := $(KERNEL_DIR)/kernel.o
+KERNEL_IDT_OBJ := $(KERNEL_DIR)/arch/x86/idt.o
+KERNEL_ISR_OBJ := $(KERNEL_DIR)/arch/x86/isr.o
 KERNEL_VGA_OBJ := $(KERNEL_DIR)/drivers/video/vga.o
 
-KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_VGA_OBJ)
+KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_ISR_OBJ) $(KERNEL_VGA_OBJ)
 
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
@@ -150,6 +153,10 @@ KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
 
 
 $(KERNEL_OBJ): $(KERNEL_ASM)
+	@mkdir -p $(@D)
+	$(ASM) -f elf32 $< -o $@
+
+$(KERNEL_ISR_OBJ): $(KERNEL_ISR)
 	@mkdir -p $(@D)
 	$(ASM) -f elf32 $< -o $@
 
