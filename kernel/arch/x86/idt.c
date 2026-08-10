@@ -12,6 +12,7 @@ static struct idt_entry idt[IDT_ENTRIES];   // x86 IDT contains 256 entries
 static struct idt_ptr idtp;
 
 extern void isr0(void);
+extern void irq1(void);
 
 static void idt_set_gate(uint8_t n, void (*ptr)(void))
 {
@@ -36,6 +37,7 @@ void idt_init(void)
     }
 
     idt_set_gate(0, isr0);
+    idt_set_gate(33, irq1);
 
     idtp.limit = sizeof(idt) - 1;
     idtp.base = (uint32_t)(uintptr_t)idt;   // stores the memory address of the IDT to base
