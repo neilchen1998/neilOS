@@ -125,6 +125,28 @@ Callee-saved (non-volatile) registers:
 | 2    | STB          | R/W    | 0 = 1 Stop bit. 1 = 2 Stop bits or 1.5, if 5 bits/character selected. |
 | 1-0  | WLS          | R/W    | 00 = 5 bits/character. 01 = 6 bits/character. 10 = 7 bits/character. 11 = 8 bits/character. |
 
+### PIC (Programmable Interrupt Controller)
+
+Hardware device
+      │
+      │ IRQ
+      ▼
+     PIC
+      │
+      │ interrupt vector
+      ▼
+     CPU
+      │
+      │ looks up vector in IDT
+      ▼
+    isr32
+      │
+      ▼
+  isr_common
+      │
+      ▼
+Handle interrupt
+
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)
