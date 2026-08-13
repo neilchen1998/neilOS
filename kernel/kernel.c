@@ -18,7 +18,7 @@ void kmain(void)
 
     terminal_write("PIC initialized!\n");
 
-    pit_init(1000);
+    pit_init(PIT_FREQUENCY);
 
     terminal_write("PIT initialized!\n");
 

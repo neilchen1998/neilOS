@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define PIT_FREQUENCY 1000  // in Hz
+
 /// @brief Initializes the Programmable Interval Timer (PIT) with the desired frequency.
 ///
 /// The PIT operates at a base frequency of 1,193,182 Hz. Since the PIT uses an
@@ -20,5 +22,12 @@ void pit_tick(void);
 ///
 /// @return The current timer tick count.
 uint32_t pit_get_ticks(void);
+
+/// @brief Returns the elapsed time in milliseconds based on PIT ticks.
+///
+/// Converts the number of PIT ticks returned by pit_get_ticks() to milliseconds using PIT_FREQUENCY.
+///
+/// @return Elapsed time in milliseconds.
+uint64_t timer_ms(void);
 
 #endif  // KERNEL_DRIVERS_TIMER_PIT_H
