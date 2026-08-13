@@ -256,6 +256,7 @@ void interrupt_handler(struct registers *regs)
 
         case 33:
             keyboard_handler();
+            pic_send_eoi(1);    // EOI for IRQ 1 (keyboard)
             break;
 
         case 34:
