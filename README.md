@@ -147,6 +147,31 @@ Hardware device
       ▼
 Handle interrupt
 
+### Programmable Interview Timer (PIT)
+
+PIT
+ │
+ │ generates periodic signal
+ ▼
+IRQ 0
+ │
+ ▼
+8259 PIC
+ │
+ │ remapped to interrupt 32 (0x20)
+ ▼
+IDT[32]
+ │
+ ▼
+isr32
+ │
+ ▼
+interrupt_handler()
+ │
+ ▼
+case 32:
+    pit_tick();
+
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)

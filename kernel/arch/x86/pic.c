@@ -6,9 +6,6 @@
 
 void pic_init(void)
 {
-    uint8_t masterMask = inb(PIC1_DATA);
-    uint8_t slaveMask  = inb(PIC2_DATA);
-
     // Start initialization sequence
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);
@@ -29,11 +26,7 @@ void pic_init(void)
     outb(PIC1_DATA, 0x01);
     outb(PIC2_DATA, 0x01);
 
-    // Restore interrupt masks
-    // outb(PIC1_DATA, masterMask);
-    // outb(PIC2_DATA, slaveMask);
-
-    outb(PIC1_DATA, 0xFF);
+    outb(PIC1_DATA, 0xFC);
     outb(PIC2_DATA, 0xFF);
 }
 

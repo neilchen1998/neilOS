@@ -4,6 +4,7 @@
 
 #include "arch/x86/pic.h"
 #include "drivers/keyboard/keyboard.h"
+#include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 
 #define IDT_ENTRIES 256
@@ -249,6 +250,11 @@ void interrupt_handler(struct registers *regs)
             break;
 
         case 32:
+            pit_tick();
+
+            if (pit_get_ticks() % 1000 == 0)
+                    terminal_write("TICK\n");
+
             pic_send_eoi(0);
             break;
 

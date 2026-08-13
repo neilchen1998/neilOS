@@ -2,6 +2,7 @@
 #include "arch/x86/pic.h"
 #include "drivers/keyboard/keyboard.h"
 #include "drivers/video/vga.h"
+#include "drivers/timer/pit.h"
 
 void kmain(void)
 {
@@ -16,6 +17,10 @@ void kmain(void)
     pic_init();
 
     terminal_write("PIC initialized!\n");
+
+    pit_init(1000);
+
+    terminal_write("PIT initialized!\n");
 
     keyboard_init();
 
