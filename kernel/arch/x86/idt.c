@@ -251,11 +251,7 @@ void interrupt_handler(struct registers *regs)
 
         case 32:
             pit_tick();
-
-            if (pit_get_ticks() % 1000 == 0)
-                    terminal_write("TICK\n");
-
-            pic_send_eoi(0);
+            pic_send_eoi(0);    // EOI for IRQ 0 (PIT timer)
             break;
 
         case 33:
