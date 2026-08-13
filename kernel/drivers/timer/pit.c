@@ -6,7 +6,7 @@
 
 #define PIT_CHANNEL0   0x40
 #define PIT_COMMAND    0x43
-#define PIT_FREQUENCY  1193182
+#define PIT_FREQUENCY  1193182  // Intel 8253/8254 PIT
 
 static volatile uint32_t ticks = 0;
 
