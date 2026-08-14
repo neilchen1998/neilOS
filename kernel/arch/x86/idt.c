@@ -6,6 +6,7 @@
 #include "drivers/keyboard/keyboard.h"
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
+#include "scheduler/scheduler.h"
 
 #define IDT_ENTRIES 256
 
@@ -149,7 +150,7 @@ void idt_init(void)
 /// @brief Handles a CPU interrupt
 //
 // @param regs Pointer to the register state captured when the interrupt occurred.
-void interrupt_handler(struct registers *regs)
+struct registers* interrupt_handler(struct registers *regs)
 {
     switch (regs->int_no)
     {
@@ -252,6 +253,17 @@ void interrupt_handler(struct registers *regs)
         case 32:
             pit_tick();
             pic_send_eoi(0);    // EOI for IRQ 0 (PIT timer)
+
+            static uint32_t schedulerTicks = 0;
+
+            ++schedulerTicks;
+
+            if (schedulerTicks >= 10)
+            {
+                schedulerTicks = 0;
+                return scheduler_schedule(regs);
+            }
+
             break;
 
         case 33:
@@ -280,4 +292,6 @@ void interrupt_handler(struct registers *regs)
             terminal_write("UNKNOWN INTERRUPT\n");
             break;
     }
+
+    return regs;
 }

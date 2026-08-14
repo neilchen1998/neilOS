@@ -1,8 +1,9 @@
 #include "arch/x86/idt.h"
 #include "arch/x86/pic.h"
 #include "drivers/keyboard/keyboard.h"
-#include "drivers/video/vga.h"
 #include "drivers/timer/pit.h"
+#include "drivers/video/vga.h"
+#include "scheduler/scheduler.h"
 
 void kmain(void)
 {
@@ -25,6 +26,8 @@ void kmain(void)
     keyboard_init();
 
     terminal_write("Keyboard initialized!\n");
+
+    scheduler_init();
 
     __asm__ volatile ("sti");
 

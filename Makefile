@@ -134,23 +134,26 @@ KERNEL_ASM := kernel/main.asm
 KERNEL_C   := kernel/kernel.c
 KERNEL_IDT := kernel/arch/x86/idt.c
 KERNEL_ISR := kernel/arch/x86/isr.asm
-KERNEL_PIC := kernel/arch/x86/pic.c
-KERNEL_LD  := kernel/linker.ld
-KERNEL_VGA := kernel/drivers/video/vga.c
-KERNEL_PIT := kernel/drivers/timer/pit.c
 KERNEL_KEYBOARD := kernel/drivers/keyboard/keyboard.c
+KERNEL_LD  := kernel/linker.ld
+KERNEL_PIC := kernel/arch/x86/pic.c
+KERNEL_PIT := kernel/drivers/timer/pit.c
+KERNEL_SCHEDULER := kernel/scheduler/scheduler.c
+KERNEL_VGA := kernel/drivers/video/vga.c
 
-KERNEL_OBJ     := $(KERNEL_DIR)/main.o
 KERNEL_C_OBJ   := $(KERNEL_DIR)/kernel.o
 KERNEL_IDT_OBJ := $(KERNEL_DIR)/arch/x86/idt.o
 KERNEL_ISR_OBJ := $(KERNEL_DIR)/arch/x86/isr.o
 KERNEL_KEYBOARD_OBJ := $(KERNEL_DIR)/drivers/keyboard/keyboard.o
+KERNEL_OBJ     := $(KERNEL_DIR)/main.o
 KERNEL_PIC_OBJ := $(KERNEL_DIR)/arch/x86/pic.o
-KERNEL_VGA_OBJ := $(KERNEL_DIR)/drivers/video/vga.o
 KERNEL_PIT_OBJ := $(KERNEL_DIR)/drivers/timer/pit.o
+KERNEL_SCHEDULER_OBJ := $(KERNEL_DIR)/scheduler/scheduler.o
+KERNEL_VGA_OBJ := $(KERNEL_DIR)/drivers/video/vga.o
 
 
-KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_ISR_OBJ) $(KERNEL_KEYBOARD_OBJ) $(KERNEL_PIC_OBJ) $(KERNEL_VGA_OBJ) $(KERNEL_PIT_OBJ)
+KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_ISR_OBJ) $(KERNEL_KEYBOARD_OBJ) $(KERNEL_PIC_OBJ) $(KERNEL_VGA_OBJ) $(KERNEL_PIT_OBJ)\
+	$(KERNEL_SCHEDULER_OBJ)
 
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin

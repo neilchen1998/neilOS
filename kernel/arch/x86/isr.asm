@@ -12,6 +12,8 @@ isr_common:
     call interrupt_handler
     add esp, 4
 
+    mov esp, eax
+
     popa
     add esp, 8
 
