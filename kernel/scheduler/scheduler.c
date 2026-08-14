@@ -1,4 +1,5 @@
 #include "scheduler.h"
+#include "arch/x86/idt.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -80,6 +81,12 @@ int task_create(void (*entry)(void))
     return (int)id;
 }
 
+void task_yield(void)
+{
+    asm volatile ("int $49");
+}
+
+
 void task_exit(void)
 {
     curTask->state = TASK_TERMINATED;
@@ -142,4 +149,21 @@ struct registers* scheduler_tick(struct registers *regs)
     schedulerTicks = 0;
 
     return scheduler_schedule(regs);
+}
+
+struct registers *scheduler_exit(struct registers *regs)
+{
+    curTask->state = TASK_TERMINATED;
+
+    struct registers* next = scheduler_schedule(regs);
+
+    if (next == regs)
+    {
+        for (;;)
+        {
+            asm volatile ("hlt");
+        }
+    }
+
+    return next;
 }

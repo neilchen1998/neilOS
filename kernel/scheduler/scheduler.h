@@ -22,11 +22,14 @@ typedef struct task
 
 void scheduler_init(void);
 
-/// @brief Creaets a new task
+/// @brief Creaets a new task.
 ///
-/// @param entry
+/// @param entry Entry point for the new task.
 /// @return Task ID on success; otherwise -1 on failure
 int task_create(void (*entry)(void));
+
+/// @brief Voluntarily gives up the CPU.
+void task_yield(void);
 
 /// @brief Terminates the currently-running task.
 void task_exit(void);
@@ -43,5 +46,7 @@ struct registers *scheduler_schedule(struct registers *regs);
 /// @return The register state that should be stored. It can either be that of the current task or
 /// the next task.
 struct registers *scheduler_tick(struct registers *regs);
+
+struct registers *scheduler_exit(struct registers *regs);
 
 #endif  // KERNEL_SCHEDULER_SCHEDULER_H

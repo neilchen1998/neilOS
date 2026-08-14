@@ -63,6 +63,9 @@ extern void isr45(void);
 extern void isr46(void);
 extern void isr47(void);
 
+extern void isr49(void);    // software yield interrupt
+extern void isr50(void);    // software exit interrupt
+
 /// @brief Sets an entry in the interrrupt descriptor table (IDT).
 //
 // @param n Index of the IDT entry to configure.
@@ -139,6 +142,9 @@ void idt_init(void)
     idt_set_gate(45, isr45);
     idt_set_gate(46, isr46);
     idt_set_gate(47, isr47);
+
+    idt_set_gate(49, isr49);    // software yield interrupt
+    idt_set_gate(50, isr50);    // software exit interrupt
 
     idtp.limit = sizeof(idt) - 1;
     idtp.base = (uint32_t)(uintptr_t)idt;   // stores the memory address of the IDT to base
@@ -255,12 +261,20 @@ struct registers* interrupt_handler(struct registers *regs)
             pic_send_eoi(0);    // EOI for IRQ 0 (PIT timer)
 
             return scheduler_tick(regs);
-            break;
 
         case 33:
             keyboard_handler();
             pic_send_eoi(1);    // EOI for IRQ 1 (keyboard)
             return regs;
+
+        case 49:
+            // software yield interrupt
+            return scheduler_schedule(regs);
+
+        case 50:
+            // software exit interrupt
+            return scheduler_exit(regs);
+
 
         case 34:
         case 35:
