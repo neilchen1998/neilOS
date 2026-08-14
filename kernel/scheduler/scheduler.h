@@ -7,7 +7,8 @@ typedef enum
 {
     TASK_READY,
     TASK_RUNNING,
-    TASK_BLOCKED
+    TASK_BLOCKED,
+    TASK_TERMINATED
 } task_state_t;
 
 typedef struct task
@@ -20,6 +21,15 @@ typedef struct task
 } task_t;
 
 void scheduler_init(void);
+
+/// @brief Creaets a new task
+///
+/// @param entry
+/// @return Task ID on success; otherwise -1 on failure
+int task_create(void (*entry)(void));
+
+/// @brief Terminates the currently-running task.
+void task_exit(void);
 
 /// @brief Performs a round-robin context switch to the next task.
 ///

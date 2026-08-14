@@ -254,22 +254,13 @@ struct registers* interrupt_handler(struct registers *regs)
             pit_tick();
             pic_send_eoi(0);    // EOI for IRQ 0 (PIT timer)
 
-            static uint32_t schedulerTicks = 0;
-
-            ++schedulerTicks;
-
-            if (schedulerTicks >= 10)
-            {
-                schedulerTicks = 0;
-                return scheduler_schedule(regs);
-            }
-
+            return scheduler_tick(regs);
             break;
 
         case 33:
             keyboard_handler();
             pic_send_eoi(1);    // EOI for IRQ 1 (keyboard)
-            break;
+            return regs;
 
         case 34:
         case 35:
