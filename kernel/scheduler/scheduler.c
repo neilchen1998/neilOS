@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "arch/x86/idt.h"
+#include "mm/kmalloc.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -61,24 +62,36 @@ void scheduler_init(void)
 int task_create(void (*entry)(void))
 {
     // Make sure the task is valid
-    if ((!entry) || (taskCnt >= MAX_TASKS))
+    if (!entry)
     {
         return -1;
     }
 
-    // Put the task on the task array
-    uint32_t id = taskCnt;
-    task_t* task = &tasks[id];
-    task->id = id;
-    task->state = TASK_READY;
-    task->next = NULL;
+    task_t* slot = NULL;
+    for (uint32_t i = 1; i < MAX_TASKS; ++i)
+    {
+        if (tasks[i].state == TASK_TERMINATED || tasks[i].id == 0)
+        {
+            slot = &tasks[i];
+            break;
+        }
+    }
 
-    // Note that the kernel is always on taskStacks[0]
-    task->esp = task_create_context(taskStacks[id - 1], entry);
+    if (!slot)
+    {
+        return -1;
+    }
 
-    ++taskCnt;
+    // Only assign a fresh ID for a brand new task
+    if (slot->id == 0)
+    {
+        slot->id = taskCnt++;
+    }
 
-    return (int)id;
+    slot->state = TASK_READY;
+    slot->esp = task_create_context(taskStacks[slot->id - 1], entry);
+
+    return (int)slot->id;
 }
 
 void task_yield(void)
@@ -86,10 +99,11 @@ void task_yield(void)
     asm volatile ("int $49");
 }
 
-
 void task_exit(void)
 {
     curTask->state = TASK_TERMINATED;
+
+    asm volatile("int $50");
 
     for (;;)
     {
@@ -116,7 +130,7 @@ struct registers *scheduler_schedule(struct registers *regs)
     uint32_t curIdx = 0;
 
     // Find the index of the current task
-    for (uint32_t i = 0; i < taskCnt; ++i)
+    for (uint32_t i = 0; i < MAX_TASKS; ++i)
     {
         if (curTask == &tasks[i])
         {
@@ -127,9 +141,9 @@ struct registers *scheduler_schedule(struct registers *regs)
 
     // Round-robin search
     // i starts at 1 since we want to avoid checking the current task itself again
-    for (uint32_t i = 1; i <= taskCnt; ++i)
+    for (uint32_t i = 1; i < MAX_TASKS; ++i)
     {
-        uint32_t nextIdx = (curIdx + i) % taskCnt;
+        uint32_t nextIdx = (curIdx + i) % MAX_TASKS;
 
         if (tasks[nextIdx].state == TASK_READY)
         {
@@ -159,7 +173,7 @@ struct registers *scheduler_schedule(struct registers *regs)
     {
         asm volatile ("sti; hlt");
 
-        for (uint32_t i = 0; i < taskCnt; ++i)
+        for (uint32_t i = 0; i < MAX_TASKS; ++i)
         {
             if (tasks[i].state == TASK_READY)
             {

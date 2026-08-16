@@ -11,6 +11,8 @@
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
 
+#define  DEBUG
+
 #ifdef DEBUG
 static void task_a(void)
 {
