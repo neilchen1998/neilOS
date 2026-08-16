@@ -7,7 +7,11 @@
 
 static void taskA(void)
 {
-    terminal_write("A\n");
+    for (;;)
+    {
+        terminal_write("A");
+        task_yield();
+    }
 }
 
 static void taskB(void)

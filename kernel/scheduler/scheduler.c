@@ -99,6 +99,11 @@ void task_exit(void)
 
 struct registers *scheduler_schedule(struct registers *regs)
 {
+    if (!curTask || !regs || taskCnt == 0)
+    {
+        return regs;
+    }
+
     curTask->esp = (uintptr_t)regs;
 
     // If the current task is running, then demote it to ready
@@ -120,6 +125,7 @@ struct registers *scheduler_schedule(struct registers *regs)
         }
     }
 
+    // Round-robin search
     // i starts at 1 since we want to avoid checking the current task itself again
     for (uint32_t i = 1; i <= taskCnt; ++i)
     {
@@ -130,7 +136,42 @@ struct registers *scheduler_schedule(struct registers *regs)
             // Perform the context switch
             curTask = &tasks[nextIdx];
             curTask->state = TASK_RUNNING;
+
+            // Reset the time slice for the new task
+            schedulerTicks = 0;
+
             return (struct registers *)curTask->esp;
+        }
+    }
+
+    // If the current task is ready, it is safe to continue to run it
+    if (curTask->state == TASK_READY)
+    {
+        curTask->state = TASK_RUNNING;
+        schedulerTicks = 0;
+
+        return (struct registers*)curTask->esp;
+    }
+
+    // There is no task that is ready, then we halt
+    // until an interrupt fires and then loop back to check the new task
+    for (;;)
+    {
+        asm volatile ("sti; hlt");
+
+        for (uint32_t i = 0; i < taskCnt; ++i)
+        {
+            if (tasks[i].state == TASK_READY)
+            {
+                // Perform the context switch
+                curTask = &tasks[i];
+                curTask->state = TASK_RUNNING;
+
+                // Reset the time slice for the new task
+                schedulerTicks = 0;
+
+                return (struct registers *)curTask->esp;
+            }
         }
     }
 }
@@ -153,17 +194,13 @@ struct registers* scheduler_tick(struct registers *regs)
 
 struct registers *scheduler_exit(struct registers *regs)
 {
-    curTask->state = TASK_TERMINATED;
-
-    struct registers* next = scheduler_schedule(regs);
-
-    if (next == regs)
+    if (!curTask || !regs)
     {
-        for (;;)
-        {
-            asm volatile ("hlt");
-        }
+        return regs;
     }
 
-    return next;
+    // Mark the task terminated before the scheduler
+    curTask->state = TASK_TERMINATED;
+
+    return scheduler_schedule(regs);
 }
