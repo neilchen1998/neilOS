@@ -130,49 +130,37 @@ $(STAGE2_BIN): $(STAGE2_DIR)/stage2.elf
 # Kernel
 KERNEL_DIR := $(BUILD)/kernel
 
-KERNEL_ASM := kernel/main.asm
-KERNEL_C   := kernel/kernel.c
-KERNEL_IDT := kernel/arch/x86/idt.c
-KERNEL_ISR := kernel/arch/x86/isr.asm
-KERNEL_KEYBOARD := kernel/drivers/keyboard/keyboard.c
-KERNEL_LD  := kernel/linker.ld
-KERNEL_PIC := kernel/arch/x86/pic.c
-KERNEL_PIT := kernel/drivers/timer/pit.c
-KERNEL_SCHEDULER := kernel/scheduler/scheduler.c
-KERNEL_VGA := kernel/drivers/video/vga.c
+KERNEL_LD := kernel/linker.ld
 
-KERNEL_C_OBJ   := $(KERNEL_DIR)/kernel.o
-KERNEL_IDT_OBJ := $(KERNEL_DIR)/arch/x86/idt.o
-KERNEL_ISR_OBJ := $(KERNEL_DIR)/arch/x86/isr.o
-KERNEL_KEYBOARD_OBJ := $(KERNEL_DIR)/drivers/keyboard/keyboard.o
-KERNEL_OBJ     := $(KERNEL_DIR)/main.o
-KERNEL_PIC_OBJ := $(KERNEL_DIR)/arch/x86/pic.o
-KERNEL_PIT_OBJ := $(KERNEL_DIR)/drivers/timer/pit.o
-KERNEL_SCHEDULER_OBJ := $(KERNEL_DIR)/scheduler/scheduler.o
-KERNEL_VGA_OBJ := $(KERNEL_DIR)/drivers/video/vga.o
+KERNEL_C_SOURCES := kernel/kernel.c \
+	kernel/arch/x86/idt.c \
+	kernel/arch/x86/pic.c \
+	kernel/drivers/keyboard/keyboard.c \
+	kernel/drivers/timer/pit.c \
+	kernel/drivers/video/vga.c \
+	kernel/scheduler/scheduler.c
 
+KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/isr.asm
 
-KERNEL_OBJS := $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(KERNEL_IDT_OBJ) $(KERNEL_ISR_OBJ) $(KERNEL_KEYBOARD_OBJ) $(KERNEL_PIC_OBJ) $(KERNEL_VGA_OBJ) $(KERNEL_PIT_OBJ)\
-	$(KERNEL_SCHEDULER_OBJ)
+KERNEL_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_DIR)/%.o,$(KERNEL_C_SOURCES))
+KERNEL_ASM_OBJS := $(patsubst kernel/%.asm,$(KERNEL_DIR)/%.o,$(KERNEL_ASM_SOURCES))
+
+KERNEL_OBJS := $(KERNEL_C_OBJS) $(KERNEL_ASM_OBJS)
 
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 
-KERNEL_CFLAGS  := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel
+KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel
+
 KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
-
-
-$(KERNEL_OBJ): $(KERNEL_ASM)
-	@mkdir -p $(@D)
-	$(ASM) -f elf32 $< -o $@
-
-$(KERNEL_ISR_OBJ): $(KERNEL_ISR)
-	@mkdir -p $(@D)
-	$(ASM) -f elf32 $< -o $@
 
 $(KERNEL_DIR)/%.o: kernel/%.c
 	@mkdir -p $(@D)
 	$(CC) $(KERNEL_CFLAGS) -c $< -o $@
+
+$(KERNEL_DIR)/%.o: kernel/%.asm
+	@mkdir -p $(@D)
+	$(ASM) -f elf32 $< -o $@
 
 $(KERNEL_ELF): $(KERNEL_OBJS) $(KERNEL_LD)
 	@mkdir -p $(@D)
