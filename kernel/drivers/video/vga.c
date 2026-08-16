@@ -1,9 +1,8 @@
 #include "vga.h"
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include "arch/x86/io.h"
 
 // VGA dimension
 #define VGA_WIDTH  80
@@ -42,6 +41,74 @@ static size_t cursorX = 0;
 static size_t cursorY = 0;
 static size_t viewportY = 0;
 
+static void terminal_render(void)
+{
+    for (size_t screenY = 0; screenY < VGA_HEIGHT; ++screenY)
+    {
+        size_t bufferY = viewportY + screenY;
+
+        for (size_t x = 0; x < VGA_WIDTH; ++x)
+        {
+            VGA_MEMORY[screenY * VGA_WIDTH + x] = (bufferY < TERMINAL_LINES) ? terminalBuffer[bufferY][x] : VGA_CLEAR;
+        }
+    }
+}
+
+static void terminal_follow_cursor(void)
+{
+    if (cursorY >= viewportY + VGA_HEIGHT)
+    {
+        viewportY = cursorY - VGA_HEIGHT + 1;
+    }
+}
+
+static int terminal_print_unsigned(unsigned int value, unsigned int base)
+{
+    char buffer[16];
+    const char* digits = "0123456789abcdef";
+    int cnt = 0;
+    int idx = 0;
+
+    if (value == 0u)
+    {
+        terminal_putchar('0');
+        return 1;
+    }
+
+    while (value != 0u)
+    {
+        buffer[idx++] = digits[value % base];
+        value /= base;
+    }
+
+    while (idx > 0)
+    {
+        terminal_putchar(buffer[--idx]);
+        ++cnt;
+    }
+
+    return cnt;
+}
+
+static int terminal_print_signed(int value)
+{
+    unsigned int mag;
+    int cnt = 0;
+
+    if (value < 0)
+    {
+        terminal_putchar('-');
+        ++cnt;
+        mag = (unsigned int)(-(value + 1)) + 1u;    // two's complement
+    }
+    else
+    {
+        mag = (unsigned int)value;
+    }
+
+    return cnt + terminal_print_unsigned(mag, 10u);
+}
+
 void terminal_clear()
 {
     for (size_t y = 0; y < TERMINAL_LINES; ++y)
@@ -62,27 +129,6 @@ void terminal_clear()
         {
             VGA_AT(y, x) = VGA_CLEAR;
         }
-    }
-}
-
-static void terminal_render(void)
-{
-    for (size_t screenY = 0; screenY < VGA_HEIGHT; ++screenY)
-    {
-        size_t bufferY = viewportY + screenY;
-
-        for (size_t x = 0; x < VGA_WIDTH; ++x)
-        {
-            VGA_MEMORY[screenY * VGA_WIDTH + x] = (bufferY < TERMINAL_LINES) ? terminalBuffer[bufferY][x] : VGA_CLEAR;
-        }
-    }
-}
-
-static void terminal_follow_cursor(void)
-{
-    if (cursorY >= viewportY + VGA_HEIGHT)
-    {
-        viewportY = cursorY - VGA_HEIGHT + 1;
     }
 }
 
@@ -217,4 +263,98 @@ void terminal_page_down(void)
 void terminal_init(void)
 {
     terminal_clear();
+}
+
+int vterminal_write(const char* fmt, va_list args)
+{
+    int cnt = 0;
+
+    while (*fmt != '\0')
+    {
+        // Ordinary characters are written directly
+        if (*fmt != '%')
+        {
+            terminal_putchar(*fmt++);
+            ++cnt;
+            continue;
+        }
+
+        // Skip the '%' character and check the format specifier
+        ++fmt;
+
+        switch (*fmt)
+        {
+            case '\0':
+            {
+                return  cnt;
+            }
+            case '%':
+            {
+                terminal_putchar('%');
+                ++cnt;
+                break;
+            }
+            case 'c':
+            {
+                terminal_putchar(va_arg(args, int));
+                ++cnt;
+                break;
+            }
+            case 's':
+            {
+                const char *str = va_arg(args, const char*);
+                if (str == 0)
+                {
+                    str = "(null)";
+                }
+
+                while (*str != '\0')
+                {
+                    terminal_putchar(*str++);
+                    ++cnt;
+                }
+                break;
+            }
+            case 'd':
+            case 'i':
+            {
+                cnt += terminal_print_signed(va_arg(args, int));
+                break;
+            }
+            case 'u':
+            {
+                cnt += terminal_print_unsigned(va_arg(args, unsigned int), 10u);
+                break;
+            }
+            case 'x':
+            {
+                cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
+                break;
+            }
+            default:
+            {
+                terminal_putchar('%');
+                terminal_putchar(*fmt);
+                cnt += 2;
+                break;
+            }
+        }
+
+        // Advance to the next character in the format string
+        ++fmt;
+    }
+
+    return cnt;
+}
+
+int fterminal_write(const char* fmt, ...)
+{
+    int cnt;
+    va_list args;
+
+    va_start(args, fmt);
+    cnt = vterminal_write(fmt, args);
+    va_end(args);
+
+    return cnt;
 }
