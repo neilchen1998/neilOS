@@ -138,6 +138,7 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 	kernel/drivers/keyboard/keyboard.c \
 	kernel/drivers/timer/pit.c \
 	kernel/drivers/video/vga.c \
+	kernel/mm/kmalloc.c \
 	kernel/scheduler/scheduler.c
 
 KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/isr.asm

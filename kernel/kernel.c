@@ -6,6 +6,7 @@
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 #include "scheduler/scheduler.h"
+#include "mm/kmalloc.h"
 
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
@@ -51,8 +52,33 @@ static void taskB(void)
 void kmain(void)
 {
     terminal_init();
+    kmalloc_init();
 
     terminal_write("Hello, from neilOS!\n");
+
+#ifdef DEBUG
+    int* a = kmalloc(64);
+    if (a)
+    {
+        a[0] = 1;
+        a[1] = 2;
+
+        if ((a[0] + a[1]) == 3)
+        {
+            terminal_write("kmalloc: OKAY!\n");
+        }
+        else
+        {
+            terminal_write("kmalloc: failed!\n");
+        }
+
+        kfree(a);
+    }
+    else
+    {
+        terminal_write("ERROR: kmalloc failed!\n");
+    }
+#endif
 
     idt_init();
 

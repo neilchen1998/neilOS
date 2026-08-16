@@ -172,6 +172,23 @@ interrupt_handler()
 case 32:
     pit_tick();
 
+### Memory Management
+
+This is the diagram of the memory when we find a valid space in the memory:
+
+```text
+b                                      split
+│                                         │
+▼                                        ▼
+┌────────────────┬────────────────────────┬───────────────────────┐
+│  b's header    │   allocated portion    │     leftover space    │
+│  HEADER_SIZE   │        size            │                       │
+└────────────────┴────────────────────────┴───────────────────────┘
+                 ↑                         ↑
+                 │                         │
+              b + HEADER_SIZE            split
+```
+
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)
