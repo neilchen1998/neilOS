@@ -12,7 +12,7 @@
 
 static task_t tasks[MAX_TASKS];
 
-static uint8_t taskStacks[MAX_USER_TASKS][STACK_SIZE];
+__attribute__((aligned(16))) static uint8_t taskStacks[MAX_USER_TASKS][STACK_SIZE];
 
 static task_t* curTask = NULL;
 
@@ -47,13 +47,18 @@ static uintptr_t task_create_context(uint8_t *stack, void (*entry)(void))
 
 void scheduler_init(void)
 {
+    for (uint8_t i = 0; i < MAX_TASKS; ++i)
+    {
+        tasks[i].id = 0;
+        tasks[i].state = TASK_TERMINATED;
+        tasks[i].esp = 0;
+        tasks[i].next = NULL;
+    }
+
     taskCnt = 1;
 
     // The kernel task
-    tasks[0].id = 0;
     tasks[0].state = TASK_RUNNING;
-    tasks[0].esp = 0;
-    tasks[0].next = NULL;
 
     curTask = &tasks[0];
     schedulerTicks = 0;

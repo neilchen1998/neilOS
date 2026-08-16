@@ -19,4 +19,16 @@ static inline unsigned char inb(uint16_t port)
     return value;
 }
 
+static inline uint32_t irq_save(void)
+{
+    uint32_t flags;
+    __asm__ volatile("pushf; pop %0; cli": "=r"(flags));
+    return flags;
+}
+
+static inline uint32_t irq_restore(uint32_t flags)
+{
+    __asm__ volatile("push %0; popf" :: "r"(flags));
+}
+
 #endif  // KERNEL_ARCH_X86_IO_H

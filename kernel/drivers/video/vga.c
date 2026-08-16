@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "arch/x86/io.h"
+
 // VGA dimension
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
@@ -62,77 +64,7 @@ static void terminal_follow_cursor(void)
     }
 }
 
-static int terminal_print_unsigned(unsigned int value, unsigned int base)
-{
-    char buffer[16];
-    const char* digits = "0123456789abcdef";
-    int cnt = 0;
-    int idx = 0;
-
-    if (value == 0u)
-    {
-        terminal_putchar('0');
-        return 1;
-    }
-
-    while (value != 0u)
-    {
-        buffer[idx++] = digits[value % base];
-        value /= base;
-    }
-
-    while (idx > 0)
-    {
-        terminal_putchar(buffer[--idx]);
-        ++cnt;
-    }
-
-    return cnt;
-}
-
-static int terminal_print_signed(int value)
-{
-    unsigned int mag;
-    int cnt = 0;
-
-    if (value < 0)
-    {
-        terminal_putchar('-');
-        ++cnt;
-        mag = (unsigned int)(-(value + 1)) + 1u;    // two's complement
-    }
-    else
-    {
-        mag = (unsigned int)value;
-    }
-
-    return cnt + terminal_print_unsigned(mag, 10u);
-}
-
-void terminal_clear()
-{
-    for (size_t y = 0; y < TERMINAL_LINES; ++y)
-    {
-        for (size_t x = 0; x < VGA_WIDTH; ++x)
-        {
-            terminalBuffer[y][x] = VGA_CLEAR;
-        }
-    }
-
-    cursorX = 0;
-    cursorY = 0;
-    viewportY = 0;
-
-    for (uint8_t y = 0; y < VGA_HEIGHT; ++y)
-    {
-        for (uint8_t x = 0; x < VGA_WIDTH; ++x)
-        {
-            VGA_AT(y, x) = VGA_CLEAR;
-        }
-    }
-}
-
-void terminal_putchar(char c)
+static void terminal_putchar_raw(char c)
 {
     switch (c)
     {
@@ -174,7 +106,7 @@ void terminal_putchar(char c)
     }
 
     // Move everything up by one line if we have reached the end
-    if (cursorY >= VGA_HEIGHT)
+    if (cursorY >= TERMINAL_LINES)
     {
         // Copy the last line and put it to the penultimate line
         for (size_t y = 1; y < TERMINAL_LINES; ++y)
@@ -195,17 +127,93 @@ void terminal_putchar(char c)
     }
 
     terminal_follow_cursor();
+}
 
+static int terminal_print_unsigned(unsigned int value, unsigned int base)
+{
+    char buffer[16];
+    const char* digits = "0123456789abcdef";
+    int cnt = 0;
+    int idx = 0;
+
+    if (value == 0u)
+    {
+        terminal_putchar_raw('0');
+        return 1;
+    }
+
+    while (value != 0u)
+    {
+        buffer[idx++] = digits[value % base];
+        value /= base;
+    }
+
+    while (idx > 0)
+    {
+        terminal_putchar_raw(buffer[--idx]);
+        ++cnt;
+    }
+
+    return cnt;
+}
+
+static int terminal_print_signed(int value)
+{
+    unsigned int mag;
+    int cnt = 0;
+
+    if (value < 0)
+    {
+        terminal_putchar_raw('-');
+        ++cnt;
+        mag = (unsigned int)(-(value + 1)) + 1u;    // two's complement
+    }
+    else
+    {
+        mag = (unsigned int)value;
+    }
+
+    return cnt + terminal_print_unsigned(mag, 10u);
+}
+
+void terminal_clear()
+{
+    for (size_t y = 0; y < TERMINAL_LINES; ++y)
+    {
+        for (size_t x = 0; x < VGA_WIDTH; ++x)
+        {
+            terminalBuffer[y][x] = VGA_CLEAR;
+        }
+    }
+
+    cursorX = 0;
+    cursorY = 0;
+    viewportY = 0;
+
+    for (uint8_t y = 0; y < VGA_HEIGHT; ++y)
+    {
+        for (uint8_t x = 0; x < VGA_WIDTH; ++x)
+        {
+            VGA_AT(y, x) = VGA_CLEAR;
+        }
+    }
+}
+
+void terminal_putchar(char c)
+{
+    terminal_putchar_raw(c);
     terminal_render();
 }
 
 void terminal_write(const char *str)
 {
+    uint32_t flags = irq_save();
     while (*str)
     {
-        terminal_putchar(*str);
+        terminal_putchar_raw(*str);
         ++str;
     }
+    irq_restore(flags);
 }
 
 void terminal_scroll_up(void)
@@ -274,7 +282,7 @@ int vterminal_write(const char* fmt, va_list args)
         // Ordinary characters are written directly
         if (*fmt != '%')
         {
-            terminal_putchar(*fmt++);
+            terminal_putchar_raw(*fmt++);
             ++cnt;
             continue;
         }
@@ -290,13 +298,13 @@ int vterminal_write(const char* fmt, va_list args)
             }
             case '%':
             {
-                terminal_putchar('%');
+                terminal_putchar_raw('%');
                 ++cnt;
                 break;
             }
             case 'c':
             {
-                terminal_putchar(va_arg(args, int));
+                terminal_putchar_raw(va_arg(args, int));
                 ++cnt;
                 break;
             }
@@ -310,7 +318,7 @@ int vterminal_write(const char* fmt, va_list args)
 
                 while (*str != '\0')
                 {
-                    terminal_putchar(*str++);
+                    terminal_putchar_raw(*str++);
                     ++cnt;
                 }
                 break;
@@ -333,8 +341,8 @@ int vterminal_write(const char* fmt, va_list args)
             }
             default:
             {
-                terminal_putchar('%');
-                terminal_putchar(*fmt);
+                terminal_putchar_raw('%');
+                terminal_putchar_raw(*fmt);
                 cnt += 2;
                 break;
             }
@@ -352,9 +360,11 @@ int fterminal_write(const char* fmt, ...)
     int cnt;
     va_list args;
 
+    uint32_t flags = irq_save();
     va_start(args, fmt);
     cnt = vterminal_write(fmt, args);
     va_end(args);
+    irq_restore(flags);
 
     return cnt;
 }
