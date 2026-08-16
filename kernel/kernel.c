@@ -11,18 +11,8 @@
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
 
-// #define  DEBUG
+#define  DEBUG
 
-static void task_print(void)
-{
-    for (;;)
-    {
-        fterminal_write("Hello from: %s\n", "Neil");
-        task_yield();
-    }
-}
-
-#ifdef DEBUG
 static void task_a(void)
 {
     for (;;)
@@ -58,7 +48,6 @@ static void taskB(void)
         task_yield();
     }
 }
-#endif
 
 void kmain(void)
 {
@@ -112,16 +101,14 @@ void kmain(void)
 
     terminal_write("Interrupts enabled!\n");
 
-    task_create(task_print);
 
 #ifdef DEBUG
     task_create(taskA);
     task_create(taskB);
     task_create(task_a);
     task_create(task_b);
-
-    terminal_write("Tasks created!\n");
 #endif
+    terminal_write("Tasks created!\n");
 
     __asm__ volatile ("sti");
 

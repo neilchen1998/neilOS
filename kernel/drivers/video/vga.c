@@ -42,6 +42,7 @@ static uint16_t terminalBuffer[TERMINAL_LINES][VGA_WIDTH];
 static size_t cursorX = 0;
 static size_t cursorY = 0;
 static size_t viewportY = 0;
+static int renderPending = 0;
 
 static void terminal_render(void)
 {
@@ -61,6 +62,23 @@ static void terminal_follow_cursor(void)
     if (cursorY >= viewportY + VGA_HEIGHT)
     {
         viewportY = cursorY - VGA_HEIGHT + 1;
+    }
+}
+
+static void terminal_write_cell(size_t bufferY, size_t x, uint16_t entry)
+{
+    if (!renderPending && bufferY >= viewportY && bufferY < viewportY + VGA_HEIGHT)
+    {
+        VGA_AT(bufferY - viewportY, x) = entry;
+    }
+}
+
+static void terminal_flush(void)
+{
+    if (renderPending)
+    {
+        terminal_render();
+        renderPending = 0;
     }
 }
 
@@ -85,12 +103,14 @@ static void terminal_putchar_raw(char c)
         {
             --cursorX;
             terminalBuffer[cursorY][cursorX] = VGA_CLEAR;
+            terminal_write_cell(cursorY, cursorX, VGA_CLEAR);
         }
         break;
     }
     default:
     {
         terminalBuffer[cursorY][cursorX] = VGA_ENTRY(c, VGA_WHITE, VGA_BLACK);
+        terminal_write_cell(cursorY, cursorX, VGA_ENTRY(c, VGA_WHITE, VGA_BLACK));
 
         ++cursorX;
 
@@ -124,6 +144,7 @@ static void terminal_putchar_raw(char c)
         }
 
         cursorY = TERMINAL_LINES - 1;
+        renderPending = 1;
     }
 
     terminal_follow_cursor();
@@ -201,8 +222,10 @@ void terminal_clear()
 
 void terminal_putchar(char c)
 {
+    uint32_t flags = irq_save();
     terminal_putchar_raw(c);
-    terminal_render();
+    terminal_flush();
+    irq_restore(flags);
 }
 
 void terminal_write(const char *str)
@@ -213,6 +236,7 @@ void terminal_write(const char *str)
         terminal_putchar_raw(*str);
         ++str;
     }
+    terminal_flush();
     irq_restore(flags);
 }
 
@@ -364,6 +388,7 @@ int fterminal_write(const char* fmt, ...)
     va_start(args, fmt);
     cnt = vterminal_write(fmt, args);
     va_end(args);
+    terminal_flush();
     irq_restore(flags);
 
     return cnt;

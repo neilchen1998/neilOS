@@ -19,7 +19,12 @@ typedef struct block
 
 _Static_assert(HEADER_SIZE % 8 == 0, "HEADER_SIZE must be a multiple of 8");
 
-static uint8_t heap[HEAP_SIZE] __attribute__((aligned(16)));
+// static uint8_t heap[HEAP_SIZE] __attribute__((aligned(16)));
+
+extern uint8_t __heap_start[];
+
+static uint8_t* const heap = __heap_start;
+
 static block_t* head = NULL;
 
 void kmalloc_init(void)

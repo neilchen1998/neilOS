@@ -3,11 +3,13 @@ bits 32
 %define COM1     0x03F8     ; I/O port address of the first PC serial port
 %define DATA_SEL 0x10       ; data selector for GDT
 
-section .text
+section .text.entry
 
 global _start
 
 extern kmain
+extern __bss_start
+extern __bss_end
 
 _start:
 
@@ -25,6 +27,13 @@ _start:
     mov esp, 0x9E000
 
     cld
+
+    ; Calculate the size of .bss and write every byte to 0
+    mov edi, __bss_start
+    mov ecx, __bss_end
+    sub ecx, edi
+    xor eax, eax
+    rep stosb           ; stores the value in AL into the memory address pointed to by EDI
 
     call serial_init
 

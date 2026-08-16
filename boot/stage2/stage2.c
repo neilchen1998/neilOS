@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "debug.h"
 #include "endian.h"
 #include "print.h"
 #include "string.h"
@@ -236,7 +235,7 @@ static int fat_read_table(void)
 static int fat_load_file(uint16_t firstCluster, uint32_t fileSize, void* destination)
 {
     uint16_t ds = current_ds();
-    uint8_t* dest = destination;
+    uint32_t linear = ((uint32_t)ds << 4) + (uint16_t)(uintptr_t)destination;
     uint16_t cluster = firstCluster;
     uint32_t remaining = fileSize;
 
@@ -257,10 +256,9 @@ static int fat_load_file(uint16_t firstCluster, uint32_t fileSize, void* destina
         uint8_t i = 0;
         while ((i < g_sectors_per_cluster) && (remaining > 0))
         {
-            uint16_t dstOff = (uint16_t)(uintptr_t)dest;
             uint32_t chunk = g_bytes_per_sector;
 
-            if (disk_read_sector(lba + i, ds, dstOff) != 0)
+            if (disk_read_sector(lba + i, (uint16_t)(linear >> 4), (uint16_t)(linear & 0xFu)) != 0)
             {
                 return -1;
             }
@@ -270,7 +268,7 @@ static int fat_load_file(uint16_t firstCluster, uint32_t fileSize, void* destina
                 chunk = remaining;
             }
 
-            dest += chunk;
+            linear += chunk;
             remaining -= chunk;
             ++i;
         }
@@ -379,6 +377,10 @@ void stage2_main(void)
             // empty
         }
     }
+
+#ifdef DEBUG
+    printf("Kernel: cluster=%u size=%u\n", (unsigned int)cluster, (unsigned int)fileSize);
+#endif
 
     if (fat_load_file(cluster, fileSize, (void*)KERNEL_SEG) != 0)
     {

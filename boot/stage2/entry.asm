@@ -20,7 +20,7 @@ _start:
     mov es, ax
     mov ss, ax
 
-    mov sp, 0xFFFE
+    mov sp, 0x3FF0
 
     sti
 
@@ -51,6 +51,10 @@ hang:
 jump_to_kernel:
 
     cli
+
+    in al, 0x92
+    or al, 0x02
+    out 0x92, al
 
     lgdt [gdt_descriptor]
 
