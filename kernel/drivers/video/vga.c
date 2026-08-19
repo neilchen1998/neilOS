@@ -7,29 +7,29 @@
 #include "arch/x86/io.h"
 
 // VGA dimension
-#define VGA_WIDTH  80
+#define VGA_WIDTH 80
 #define VGA_HEIGHT 25
-#define TERMINAL_LINES  1000
+#define TERMINAL_LINES 1000
 
-#define VGA_MEMORY ((volatile uint16_t *)0xB8000)
+#define VGA_MEMORY ((volatile uint16_t*)0xB8000)
 
 // Colours
-#define VGA_BLACK         0x0
-#define VGA_BLUE          0x1
-#define VGA_GREEN         0x2
-#define VGA_CYAN          0x3
-#define VGA_RED           0x4
-#define VGA_MAGENTA       0x5
-#define VGA_BROWN         0x6
-#define VGA_LIGHT_GRAY    0x7
-#define VGA_DARK_GRAY     0x8
-#define VGA_LIGHT_BLUE    0x9
-#define VGA_LIGHT_GREEN   0xA
-#define VGA_LIGHT_CYAN    0xB
-#define VGA_LIGHT_RED     0xC
+#define VGA_BLACK 0x0
+#define VGA_BLUE 0x1
+#define VGA_GREEN 0x2
+#define VGA_CYAN 0x3
+#define VGA_RED 0x4
+#define VGA_MAGENTA 0x5
+#define VGA_BROWN 0x6
+#define VGA_LIGHT_GRAY 0x7
+#define VGA_DARK_GRAY 0x8
+#define VGA_LIGHT_BLUE 0x9
+#define VGA_LIGHT_GREEN 0xA
+#define VGA_LIGHT_CYAN 0xB
+#define VGA_LIGHT_RED 0xC
 #define VGA_LIGHT_MAGENTA 0xD
-#define VGA_YELLOW        0xE
-#define VGA_WHITE         0xF
+#define VGA_YELLOW 0xE
+#define VGA_WHITE 0xF
 
 #define VGA_AT(row, col) VGA_MEMORY[(row) * VGA_WIDTH + (col)]
 
@@ -86,19 +86,28 @@ static void terminal_putchar_raw(char c)
 {
     switch (c)
     {
-    case '\n':
-    {
+    case '\t': {
+        // Round cursorX up to the next multiple of 4
+        cursorX = (cursorX + 4) & ~3;
+
+        if (cursorX >= VGA_WIDTH)
+        {
+            cursorX = 0;
+            ++cursorY;
+        }
+
+        break;
+    }
+    case '\n': {
         cursorX = 0;
         ++cursorY;
         break;
     }
-    case '\r':
-    {
+    case '\r': {
         cursorX = 0;
         break;
     }
-    case '\b':
-    {
+    case '\b': {
         if (cursorX > 0)
         {
             --cursorX;
@@ -107,8 +116,7 @@ static void terminal_putchar_raw(char c)
         }
         break;
     }
-    default:
-    {
+    default: {
         terminalBuffer[cursorY][cursorX] = VGA_ENTRY(c, VGA_WHITE, VGA_BLACK);
         terminal_write_cell(cursorY, cursorX, VGA_ENTRY(c, VGA_WHITE, VGA_BLACK));
 
@@ -187,7 +195,7 @@ static int terminal_print_signed(int value)
     {
         terminal_putchar_raw('-');
         ++cnt;
-        mag = (unsigned int)(-(value + 1)) + 1u;    // two's complement
+        mag = (unsigned int)(-(value + 1)) + 1u; // two's complement
     }
     else
     {
@@ -228,7 +236,7 @@ void terminal_putchar(char c)
     irq_restore(flags);
 }
 
-void terminal_write(const char *str)
+void terminal_write(const char* str)
 {
     uint32_t flags = irq_save();
     while (*str)
@@ -242,7 +250,8 @@ void terminal_write(const char *str)
 
 void terminal_scroll_up(void)
 {
-    if (viewportY > 0) {
+    if (viewportY > 0)
+    {
         viewportY--;
         terminal_render();
     }
@@ -316,60 +325,52 @@ int vterminal_write(const char* fmt, va_list args)
 
         switch (*fmt)
         {
-            case '\0':
+        case '\0': {
+            return cnt;
+        }
+        case '%': {
+            terminal_putchar_raw('%');
+            ++cnt;
+            break;
+        }
+        case 'c': {
+            terminal_putchar_raw(va_arg(args, int));
+            ++cnt;
+            break;
+        }
+        case 's': {
+            const char* str = va_arg(args, const char*);
+            if (str == 0)
             {
-                return  cnt;
+                str = "(null)";
             }
-            case '%':
-            {
-                terminal_putchar_raw('%');
-                ++cnt;
-                break;
-            }
-            case 'c':
-            {
-                terminal_putchar_raw(va_arg(args, int));
-                ++cnt;
-                break;
-            }
-            case 's':
-            {
-                const char *str = va_arg(args, const char*);
-                if (str == 0)
-                {
-                    str = "(null)";
-                }
 
-                while (*str != '\0')
-                {
-                    terminal_putchar_raw(*str++);
-                    ++cnt;
-                }
-                break;
-            }
-            case 'd':
-            case 'i':
+            while (*str != '\0')
             {
-                cnt += terminal_print_signed(va_arg(args, int));
-                break;
+                terminal_putchar_raw(*str++);
+                ++cnt;
             }
-            case 'u':
-            {
-                cnt += terminal_print_unsigned(va_arg(args, unsigned int), 10u);
-                break;
-            }
-            case 'x':
-            {
-                cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
-                break;
-            }
-            default:
-            {
-                terminal_putchar_raw('%');
-                terminal_putchar_raw(*fmt);
-                cnt += 2;
-                break;
-            }
+            break;
+        }
+        case 'd':
+        case 'i': {
+            cnt += terminal_print_signed(va_arg(args, int));
+            break;
+        }
+        case 'u': {
+            cnt += terminal_print_unsigned(va_arg(args, unsigned int), 10u);
+            break;
+        }
+        case 'x': {
+            cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
+            break;
+        }
+        default: {
+            terminal_putchar_raw('%');
+            terminal_putchar_raw(*fmt);
+            cnt += 2;
+            break;
+        }
         }
 
         // Advance to the next character in the format string

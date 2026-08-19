@@ -123,8 +123,8 @@ int task_create(void (*entry)(void))
         return -1;
     }
 
-    slot->state = TASK_READY;
     slot->esp = task_create_context(taskStacks[slot->id - 1], entry);
+    slot->state = TASK_READY;
 
     irq_restore(flags);
 
@@ -167,6 +167,8 @@ int task_unblock(uint32_t id)
     }
 
     irq_restore(flags);
+
+    return -1;
 }
 
 struct registers* scheduler_schedule(struct registers* regs)
@@ -199,7 +201,7 @@ struct registers* scheduler_schedule(struct registers* regs)
 
     // Round-robin search
     // i starts at 1 since we want to avoid checking the current task itself again
-    for (uint32_t i = 1; i < MAX_TASKS; ++i)
+    for (uint32_t i = 1; i <= MAX_TASKS; ++i)
     {
         uint32_t nextIdx = (curIdx + i) % MAX_TASKS;
 
@@ -228,6 +230,8 @@ struct registers* scheduler_schedule(struct registers* regs)
     curTask = &idleTask;
     curTask->state = TASK_RUNNING;
     schedulerTicks = 0;
+
+    return (struct registers*)curTask->esp;
 }
 
 struct registers* scheduler_tick(struct registers* regs)
