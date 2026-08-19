@@ -1,7 +1,6 @@
 #ifndef KERNEL_MM_PAGING_H
 #define KERNEL_MM_PAGING_H
 
-#include <cstdint>
 #include <stddef.h>
 #include <stdint.h>
 
