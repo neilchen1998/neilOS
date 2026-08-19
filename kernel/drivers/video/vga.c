@@ -86,7 +86,8 @@ static void terminal_putchar_raw(char c)
 {
     switch (c)
     {
-    case '\t': {
+    case '\t':
+    {
         // Round cursorX up to the next multiple of 4
         cursorX = (cursorX + 4) & ~3;
 
@@ -98,16 +99,19 @@ static void terminal_putchar_raw(char c)
 
         break;
     }
-    case '\n': {
+    case '\n':
+    {
         cursorX = 0;
         ++cursorY;
         break;
     }
-    case '\r': {
+    case '\r':
+    {
         cursorX = 0;
         break;
     }
-    case '\b': {
+    case '\b':
+    {
         if (cursorX > 0)
         {
             --cursorX;
@@ -116,7 +120,8 @@ static void terminal_putchar_raw(char c)
         }
         break;
     }
-    default: {
+    default:
+    {
         terminalBuffer[cursorY][cursorX] = VGA_ENTRY(c, VGA_WHITE, VGA_BLACK);
         terminal_write_cell(cursorY, cursorX, VGA_ENTRY(c, VGA_WHITE, VGA_BLACK));
 
@@ -325,20 +330,24 @@ int vterminal_write(const char* fmt, va_list args)
 
         switch (*fmt)
         {
-        case '\0': {
+        case '\0':
+        {
             return cnt;
         }
-        case '%': {
+        case '%':
+        {
             terminal_putchar_raw('%');
             ++cnt;
             break;
         }
-        case 'c': {
+        case 'c':
+        {
             terminal_putchar_raw(va_arg(args, int));
             ++cnt;
             break;
         }
-        case 's': {
+        case 's':
+        {
             const char* str = va_arg(args, const char*);
             if (str == 0)
             {
@@ -353,19 +362,23 @@ int vterminal_write(const char* fmt, va_list args)
             break;
         }
         case 'd':
-        case 'i': {
+        case 'i':
+        {
             cnt += terminal_print_signed(va_arg(args, int));
             break;
         }
-        case 'u': {
+        case 'u':
+        {
             cnt += terminal_print_unsigned(va_arg(args, unsigned int), 10u);
             break;
         }
-        case 'x': {
+        case 'x':
+        {
             cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
             break;
         }
-        default: {
+        default:
+        {
             terminal_putchar_raw('%');
             terminal_putchar_raw(*fmt);
             cnt += 2;
