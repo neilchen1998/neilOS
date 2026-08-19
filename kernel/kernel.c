@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include "arch/x86/idt.h"
@@ -5,48 +6,89 @@
 #include "drivers/keyboard/keyboard.h"
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
-#include "scheduler/scheduler.h"
 #include "mm/kmalloc.h"
+#include "scheduler/scheduler.h"
 
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
 
-#define  DEBUG
+static size_t blockerID = -1;
 
 static void task_a(void)
 {
-    for (;;)
+    while (timer_ms() < 5000)
     {
         cntA++;
-        task_yield();
     }
 }
 
 static void task_b(void)
 {
-    for (;;)
+    while (timer_ms() < 5000)
     {
         cntB++;
-        task_yield();
     }
 }
 
-static void taskA(void)
+static void monitor(void)
 {
-    for (;;)
+    uint64_t next = 0;
+
+    while (timer_ms() < 5000)
     {
-        fterminal_write("A: %i\n", cntA);
+        if (timer_ms() >= next)
+        {
+            fterminal_write("A: %i B:%i\n", cntA, cntB);
+            next = timer_ms() + 500;
+        }
+
         task_yield();
     }
+
+    fterminal_write("Preemptive test done!\t A: %i, B:%i\n", cntA, cntB);
 }
 
-static void taskB(void)
+static void blocker(void)
 {
-    for (;;)
+    fterminal_write("blocker: sleeping...\n");
+    task_block();
+    fterminal_write("blocker: woken!\n");
+    task_exit();
+}
+
+static void waker(void)
+{
+    while (timer_ms() < 5000)
     {
-        fterminal_write("B: %i\n", cntB);
         task_yield();
     }
+
+    fterminal_write("waker: unblock %i -> %i\n", blockerID, task_unblock(blockerID));
+    task_exit();
+}
+
+static void short_lived(void)
+{
+    task_exit();
+}
+
+static void spawner(void)
+{
+    uint32_t fails = 0;
+
+    for (uint32_t i = 0; i < 1000; ++i)
+    {
+        if (task_create(short_lived) < 0)
+        {
+            ++fails;
+        }
+
+        task_yield();
+    }
+
+    fterminal_write("spawner done: %i failure(s).\n", fails);
+
+    task_exit();
 }
 
 void kmain(void)
@@ -101,19 +143,24 @@ void kmain(void)
 
     terminal_write("Interrupts enabled!\n");
 
-
-#ifdef DEBUG
-    task_create(taskA);
-    task_create(taskB);
+    blockerID = task_create(blocker);
+    task_create(waker);
+    task_create(monitor);
     task_create(task_a);
     task_create(task_b);
-#endif
+    task_create(spawner);
+
     terminal_write("Tasks created!\n");
 
-    __asm__ volatile ("sti");
+    __asm__ volatile("sti");
+
+    while (timer_ms() < 5000)
+    {
+        task_yield();
+    }
 
     for (;;)
     {
-        __asm__ volatile ("hlt");
+        __asm__ volatile("hlt");
     }
 }

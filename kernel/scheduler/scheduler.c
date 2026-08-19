@@ -1,46 +1,61 @@
 #include "scheduler.h"
-#include "arch/x86/idt.h"
-#include "mm/kmalloc.h"
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
-#define MAX_TASKS       10
-#define MAX_USER_TASKS  ((MAX_TASKS) - 1)
-#define STACK_SIZE      4096
-#define TIME_SLICE_MS   10
+#include "arch/x86/idt.h"
+#include "arch/x86/io.h"
+
+#define MAX_TASKS 10
+#define MAX_USER_TASKS ((MAX_TASKS) - 1)
+#define STACK_SIZE 4096
+#define TIME_SLICE_MS 10
 
 static task_t tasks[MAX_TASKS];
 
 __attribute__((aligned(16))) static uint8_t taskStacks[MAX_USER_TASKS][STACK_SIZE];
 
-static task_t* curTask = NULL;
+// A dedicated idle task that runs ONLY when nothing else is ready
+// NOTE: this is needed when the scheduler never has to halt inside the interrrupt handler
+static task_t idleTask;
 
-static uint32_t taskCnt = 0;
+__attribute__((aligned(16))) static uint8_t idleStack[STACK_SIZE];
 
-static uint32_t schedulerTicks = 0;
+static volatile task_t* curTask = NULL;
 
-static uintptr_t task_create_context(uint8_t *stack, void (*entry)(void))
+static uint32_t nextTaskID = 0;
+
+static volatile uint32_t schedulerTicks = 0;
+
+static void idle_task_entry(void)
 {
-    uintptr_t *sp = (uintptr_t *)(stack + STACK_SIZE);
+    for (;;)
+    {
+        asm volatile("hlt");
+    }
+}
+
+static uintptr_t task_create_context(uint8_t* stack, void (*entry)(void))
+{
+    uintptr_t* sp = (uintptr_t*)(stack + STACK_SIZE);
 
     *(--sp) = (uintptr_t)task_exit;
 
-    *(--sp) = 0x202;              // EFLAGS: IF = 1
-    *(--sp) = 0x08;               // Kernel CS
-    *(--sp) = (uintptr_t)entry;   // EIP
+    *(--sp) = 0x202;            // EFLAGS: IF = 1
+    *(--sp) = 0x08;             // Kernel CS
+    *(--sp) = (uintptr_t)entry; // EIP
 
-    *(--sp) = 0;                  // error code
-    *(--sp) = 32;                 // interrupt number
+    *(--sp) = 0;  // error code
+    *(--sp) = 32; // interrupt number
 
-    *(--sp) = 0;                  // EAX
-    *(--sp) = 0;                  // ECX
-    *(--sp) = 0;                  // EDX
-    *(--sp) = 0;                  // EBX
-    *(--sp) = 0;                  // original ESP
-    *(--sp) = 0;                  // EBP
-    *(--sp) = 0;                  // ESI
-    *(--sp) = 0;                  // EDI
+    *(--sp) = 0; // EAX
+    *(--sp) = 0; // ECX
+    *(--sp) = 0; // EDX
+    *(--sp) = 0; // EBX
+    *(--sp) = 0; // original ESP
+    *(--sp) = 0; // EBP
+    *(--sp) = 0; // ESI
+    *(--sp) = 0; // EDI
 
     return (uintptr_t)sp;
 }
@@ -55,10 +70,16 @@ void scheduler_init(void)
         tasks[i].next = NULL;
     }
 
-    taskCnt = 1;
+    nextTaskID = 1;
 
     // The kernel task
     tasks[0].state = TASK_RUNNING;
+
+    // Start the idle task
+    idleTask.id = (uint32_t)-1;
+    idleTask.state = TASK_READY;
+    idleTask.esp = task_create_context(idleStack, idle_task_entry);
+    idleTask.next = NULL;
 
     curTask = &tasks[0];
     schedulerTicks = 0;
@@ -72,10 +93,12 @@ int task_create(void (*entry)(void))
         return -1;
     }
 
+    uint32_t flags = irq_save();
+
     task_t* slot = NULL;
     for (uint32_t i = 1; i < MAX_TASKS; ++i)
     {
-        if (tasks[i].state == TASK_TERMINATED || tasks[i].id == 0)
+        if (tasks[i].state == TASK_TERMINATED)
         {
             slot = &tasks[i];
             break;
@@ -84,41 +107,71 @@ int task_create(void (*entry)(void))
 
     if (!slot)
     {
+        irq_restore(flags);
         return -1;
     }
 
     // Only assign a fresh ID for a brand new task
     if (slot->id == 0)
     {
-        slot->id = taskCnt++;
+        slot->id = nextTaskID++;
+    }
+
+    if (slot->id - 1 >= MAX_USER_TASKS)
+    {
+        irq_restore(flags);
+        return -1;
     }
 
     slot->state = TASK_READY;
     slot->esp = task_create_context(taskStacks[slot->id - 1], entry);
+
+    irq_restore(flags);
 
     return (int)slot->id;
 }
 
 void task_yield(void)
 {
-    asm volatile ("int $49");
+    asm volatile("int $49");
 }
 
 void task_exit(void)
 {
-    curTask->state = TASK_TERMINATED;
-
     asm volatile("int $50");
 
     for (;;)
     {
-        asm volatile ("hlt");
+        asm volatile("hlt");
     }
 }
 
-struct registers *scheduler_schedule(struct registers *regs)
+void task_block(void)
 {
-    if (!curTask || !regs || taskCnt == 0)
+    curTask->state = TASK_BLOCKED;
+    task_yield();
+}
+
+int task_unblock(uint32_t id)
+{
+    uint32_t flags = irq_save();
+
+    for (uint32_t i = 1; i < MAX_TASKS; ++i)
+    {
+        if (tasks[i].id == id && tasks[i].state == TASK_BLOCKED)
+        {
+            tasks[i].state = TASK_READY;
+            irq_restore(flags);
+            return 0;
+        }
+    }
+
+    irq_restore(flags);
+}
+
+struct registers* scheduler_schedule(struct registers* regs)
+{
+    if (!curTask || !regs)
     {
         return regs;
     }
@@ -159,7 +212,7 @@ struct registers *scheduler_schedule(struct registers *regs)
             // Reset the time slice for the new task
             schedulerTicks = 0;
 
-            return (struct registers *)curTask->esp;
+            return (struct registers*)curTask->esp;
         }
     }
 
@@ -172,30 +225,12 @@ struct registers *scheduler_schedule(struct registers *regs)
         return (struct registers*)curTask->esp;
     }
 
-    // There is no task that is ready, then we halt
-    // until an interrupt fires and then loop back to check the new task
-    for (;;)
-    {
-        asm volatile ("sti; hlt");
-
-        for (uint32_t i = 0; i < MAX_TASKS; ++i)
-        {
-            if (tasks[i].state == TASK_READY)
-            {
-                // Perform the context switch
-                curTask = &tasks[i];
-                curTask->state = TASK_RUNNING;
-
-                // Reset the time slice for the new task
-                schedulerTicks = 0;
-
-                return (struct registers *)curTask->esp;
-            }
-        }
-    }
+    curTask = &idleTask;
+    curTask->state = TASK_RUNNING;
+    schedulerTicks = 0;
 }
 
-struct registers* scheduler_tick(struct registers *regs)
+struct registers* scheduler_tick(struct registers* regs)
 {
     ++schedulerTicks;
 
@@ -211,7 +246,7 @@ struct registers* scheduler_tick(struct registers *regs)
     return scheduler_schedule(regs);
 }
 
-struct registers *scheduler_exit(struct registers *regs)
+struct registers* scheduler_exit(struct registers* regs)
 {
     if (!curTask || !regs)
     {
