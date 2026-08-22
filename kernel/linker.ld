@@ -4,6 +4,8 @@ SECTIONS
 {
     . = 0x9000;
 
+    __kernel_start = .;
+
     .text : ALIGN(16)
     {
         *(.text.entry)
@@ -28,7 +30,10 @@ SECTIONS
         __bss_end = .;
     }
 
+    __kernel_end = .;
+
     ASSERT(. <= 0x98000, "kernel image + bss overlaps the kernel stack")
 
     __heap_start = 0x100000;
+    __heap_end = __heap_start + 0x100000;
 }

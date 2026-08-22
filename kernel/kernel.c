@@ -7,6 +7,7 @@
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 #include "mm/kmalloc.h"
+#include "mm/physical.h"
 #include "scheduler/scheduler.h"
 
 static volatile uint32_t cntA = 0;
@@ -95,6 +96,7 @@ void kmain(void)
 {
     terminal_init();
     kmalloc_init();
+    physical_init();
 
     terminal_write("Hello, from neilOS!\n");
 
