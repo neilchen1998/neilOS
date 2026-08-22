@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "drivers/video/vga.h"
 #include "physical.h"
 
 #define PAGE_TABLE_ENTRIES 1024u
@@ -15,8 +16,6 @@
 #define PAGE_TABLE_INDEX(address) (((address) >> 12) & 0x3FFu)
 
 #define PAGE_OFFSET(address) ((address) & 0xFFFu)
-
-#define INIT_ADDRESS_SPACE (PAGE_SIZE * PAGE_TABLE_ENTRIES)
 
 static uint32_t pageDirectory[PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 static uint32_t firstPageTable[PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -36,7 +35,7 @@ static inline uint32_t* physical_to_virtual(uint32_t physicalAddress)
 // @return TRUE if the page address is page-aligned and below NIT_ADDRESS_SPACE, FALSE otherwise.
 inline static bool page_address_valid(uint32_t address)
 {
-    return ((address % PAGE_SIZE) == 0) && (address < INIT_ADDRESS_SPACE);
+    return (address & (PAGE_SIZE - 1u)) == 0;
 }
 
 // @brief Flushes the virtual address from the TLB (translation lookaside buffer).
@@ -141,6 +140,22 @@ void paging_init(void)
 
 int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags)
 {
+    fterminal_write("paging_map: VA=%x PA=%x\n", virtualAddress, physicalAddress);
+
+    fterminal_write("paging_map: VA valid=%d PA valid=%d\n", page_address_valid(virtualAddress), page_address_valid(physicalAddress));
+
+    if (!page_address_valid(virtualAddress))
+    {
+        fterminal_write("paging_map: INVALID VIRTUAL\n");
+        return -1;
+    }
+
+    if (!page_address_valid(physicalAddress))
+    {
+        fterminal_write("paging_map: INVALID PHYSICAL\n");
+        return -1;
+    }
+
     // Check if both addresses are page-aligned
     if (!page_address_valid(virtualAddress) || !page_address_valid(physicalAddress))
     {
@@ -179,6 +194,7 @@ int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags
         return -3;
     }
 
+    // Install the physical-to-virtual mapping
     pageTable[tableIdx] = (physicalAddress & PAGE_ADDRESS_MASK) | (flags & ~PAGE_ADDRESS_MASK);
 
     pageTable[tableIdx] |= PAGE_PRESENT;
@@ -219,4 +235,207 @@ int paging_unmap(uint32_t virtualAddress)
     paging_invalidate_page(virtualAddress);
 
     return 0;
+}
+
+#define PAGING_TEST_PHYSICAL 0x00300000u
+#define PAGING_TEST_VIRTUAL 0x00400000u
+
+static void paging_test_fail(const char* message)
+{
+    fterminal_write("PAGING TEST FAILED: %s\n", message);
+
+    /*
+     * Stop here so a failure does not corrupt the rest of the kernel.
+     */
+    for (;;)
+    {
+        __asm__ volatile("cli");
+        __asm__ volatile("hlt");
+    }
+}
+
+static void paging_test_pass(const char* message)
+{
+    fterminal_write("PAGING TEST PASSED: %s\n", message);
+}
+
+void paging_test(void)
+{
+    fterminal_write("\n=== PAGING TEST START ===\n");
+
+    /*
+     * Enable paging and establish the initial identity mapping.
+     */
+    paging_init();
+
+    fterminal_write("1. paging_init: OK\n");
+
+    /*
+     * Verify that the initial identity mapping works.
+     *
+     * 0x00200000 is inside the first 4 MiB identity mapping.
+     */
+    volatile uint32_t* identity = (volatile uint32_t*)(uintptr_t)0x00200000u;
+
+    *identity = 0x12345678u;
+
+    if (*identity != 0x12345678u)
+    {
+        fterminal_write("1. identity mapping: FAILED\n");
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("2. identity mapping: OK\n");
+
+    /*
+     * Allocate a physical page for the mapping test.
+     */
+    uint32_t testPhysical = physical_alloc_page();
+
+    fterminal_write("3. allocated physical page: %x\n", testPhysical);
+
+    if (testPhysical == 0)
+    {
+        fterminal_write("3. physical allocation: FAILED\n");
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    /*
+     * The physical page must be page aligned.
+     */
+    if ((testPhysical & (PAGE_SIZE - 1u)) != 0)
+    {
+        fterminal_write("4. physical alignment: FAILED (%x)\n", testPhysical);
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("4. physical alignment: OK\n");
+
+    /*
+     * IMPORTANT:
+     *
+     * The physical page returned by physical_alloc_page() must
+     * currently be identity mapped for this access to work.
+     *
+     * If testPhysical is above 4 MiB, this access will page fault.
+     */
+    volatile uint32_t* physical = (volatile uint32_t*)(uintptr_t)testPhysical;
+
+    *physical = 0xCAFEBABEu;
+
+    fterminal_write("5. physical page access: OK\n");
+
+    /*
+     * 0x00400000 is the first virtual address after the initial
+     * 4 MiB identity mapping.
+     */
+    const uint32_t testVirtual = 0x00400000u;
+
+    fterminal_write("6. mapping %x -> %x\n", testVirtual, testPhysical);
+
+    int result = paging_map(testVirtual, testPhysical, PAGE_WRITABLE);
+
+    fterminal_write("7. paging_map returned: %d\n", result);
+
+    if (result != 0)
+    {
+        fterminal_write("7. paging_map: FAILED\n");
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("7. paging_map: OK\n");
+
+    /*
+     * Access the physical page through the new virtual address.
+     */
+    volatile uint32_t* virtual = (volatile uint32_t*)(uintptr_t)testVirtual;
+
+    fterminal_write("8. testing virtual address %x\n", testVirtual);
+
+    if (*virtual != 0xCAFEBABEu)
+    {
+        fterminal_write("8. virtual read: FAILED, got %x\n", *virtual);
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("8. virtual read: OK\n");
+
+    /*
+     * Write through the virtual address.
+     */
+    *virtual = 0xDEADBEEFu;
+
+    if (*physical != 0xDEADBEEFu)
+    {
+        fterminal_write("9. virtual write: FAILED, physical=%x\n", *physical);
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("9. virtual write: OK\n");
+
+    /*
+     * Remove the mapping.
+     */
+    result = paging_unmap(testVirtual);
+
+    fterminal_write("10. paging_unmap returned: %d\n", result);
+
+    if (result != 0)
+    {
+        fterminal_write("10. paging_unmap: FAILED\n");
+
+        for (;;)
+        {
+            __asm__ volatile("cli");
+            __asm__ volatile("hlt");
+        }
+    }
+
+    fterminal_write("10. paging_unmap: OK\n");
+
+    /*
+     * Don't access testVirtual here!
+     *
+     * It is intentionally unmapped now, so doing:
+     *
+     *     *virtual
+     *
+     * should cause a page fault.
+     */
+
+    physical_free_page(testPhysical);
+
+    fterminal_write("11. physical page freed: OK\n");
+
+    fterminal_write("=== PAGING TEST COMPLETE ===\n");
 }

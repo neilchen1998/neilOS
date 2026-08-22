@@ -28,4 +28,6 @@ int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags
 /// @return 0 on success; otherwise an error code.
 int paging_unmap(uint32_t virtualAddress);
 
+void paging_test(void);
+
 #endif // KERNEL_MM_PAGING_H

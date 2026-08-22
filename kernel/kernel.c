@@ -7,6 +7,7 @@
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 #include "mm/kmalloc.h"
+#include "mm/paging.h"
 #include "mm/physical.h"
 #include "scheduler/scheduler.h"
 
@@ -154,6 +155,8 @@ void kmain(void)
 
     fterminal_write("Physical memory initialized!\n");
 
+    paging_test();
+
     uint32_t page_a = physical_alloc_page();
     uint32_t page_b = physical_alloc_page();
     uint32_t page_c = physical_alloc_page();
@@ -215,16 +218,14 @@ void kmain(void)
 
     fterminal_write("Interrupts enabled!\n");
 
-#ifdef DEBUG
-    // blockerID = task_create(blocker);
-    // task_create(waker);
-    // task_create(monitor);
-    // task_create(task_a);
-    // task_create(task_b);
-    // task_create(spawner);
+    blockerID = task_create(blocker);
+    task_create(waker);
+    task_create(monitor);
+    task_create(task_a);
+    task_create(task_b);
+    task_create(spawner);
 
-    // fterminal_write("Tasks created!\n");
-#endif
+    fterminal_write("Tasks created!\n");
 
     __asm__ volatile("sti");
 
