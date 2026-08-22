@@ -77,6 +77,7 @@ $(STAGE2_DIR)/stage2.o: boot/stage2/stage2.c
 		-fno-asynchronous-unwind-tables \
 		-Iboot/stage2/lib \
 		-Wall \
+		-MMD -MP \
 		-c $< \
 		-o $@
 
@@ -98,6 +99,7 @@ $(STAGE2_DIR)/lib.a: $(STAGE2_LIB_SRC)
 			-fdata-sections \
 			-Iboot/stage2/lib \
 			-Wall \
+			-MMD -MP \
 			-c $(src) \
 			-o $(STAGE2_DIR)/$(notdir $(src:.c=.o)); \
 	)
@@ -153,7 +155,7 @@ KERNEL_OBJS := $(KERNEL_C_OBJS) $(KERNEL_ASM_OBJS)
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 
-KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel
+KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel -MMD -MP
 
 KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
 
@@ -180,6 +182,11 @@ run: image
 
 debug: image
 	qemu-system-i386 -fda $(IMAGE) -s -S
+
+
+# Auto-generated header dependencies
+-include $(STAGE2_DIR)/stage2.d $(STAGE2_LIB_OBJ:.o=.d)
+-include $(KERNEL_C_OBJS:.o=.d)
 
 
 # Clean
