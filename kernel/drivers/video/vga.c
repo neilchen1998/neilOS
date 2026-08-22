@@ -374,6 +374,9 @@ int vterminal_write(const char* fmt, va_list args)
         }
         case 'x':
         {
+            terminal_putchar_raw('0');
+            terminal_putchar_raw('x');
+            cnt += 2;
             cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
             break;
         }
