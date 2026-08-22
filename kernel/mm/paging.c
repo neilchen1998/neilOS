@@ -1,5 +1,6 @@
 #include "paging.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -31,36 +32,39 @@ static inline uint32_t* physical_to_virtual(uint32_t physicalAddress)
 
 // @brief Checks if the address is page aligned.
 //
-// @param address
-// @return
-inline static int page_address_valid(uint32_t address)
+// @param address The address to be validated
+// @return TRUE if the page address is page-aligned and below NIT_ADDRESS_SPACE, FALSE otherwise.
+inline static bool page_address_valid(uint32_t address)
 {
     return ((address % PAGE_SIZE) == 0) && (address < INIT_ADDRESS_SPACE);
 }
 
 // @brief Flushes the virtual address from the TLB (translation lookaside buffer).
 //
-// @param virtualAddress
+// @param virtualAddress The virtual address whose TLB entry should be invalidated.
 static inline void paging_invalidate_page(uint32_t virtualAddress)
 {
     asm volatile("invlpg (%0)" : : "r"((void*)(uintptr_t)virtualAddress) : "memory");
 }
 
-// @brief Read CR3.
+// @brief Reads the current value of the CR3 control register.
 //
-// @return
+// CR3 contains the physical address of the current page directory
+// or page-table hierarchy used for address translation.
+//
+// @return Current value of the CR3 register.
 static inline uint32_t paging_get_cr3(void)
 {
     uint32_t value;
 
-    asm volatile("mov %%cr2, %0" : "=r"(value) : : "memory");
+    asm volatile("mov %%cr3, %0" : "=r"(value) : : "memory");
 
     return value;
 }
 
-// @brief Reads CR3.
+// @brief Loads the specified physical address into the CR3 control register.
 //
-// @param address
+// @param address Physical address of the page directory or page-table hierarchy to load into CR3.
 static inline void paging_load_cr3(uint32_t address)
 {
 
@@ -137,6 +141,7 @@ void paging_init(void)
 
 int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags)
 {
+    // Check if both addresses are page-aligned
     if (!page_address_valid(virtualAddress) || !page_address_valid(physicalAddress))
     {
         return -1;
@@ -148,8 +153,19 @@ int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags
 
     uint32_t* pageTable;
 
+    // Check if the required page table exists
     if (!(directoryEntry & PAGE_PRESENT))
     {
+        uint32_t tablePhysicalAddress = allocate_page_table();
+
+        if (tablePhysicalAddress == 0)
+        {
+            return -2;
+        }
+
+        pageDirectory[direcotryIdx] = (tablePhysicalAddress & PAGE_ADDRESS_MASK) | PAGE_PRESENT | PAGE_WRITABLE;
+
+        pageTable = physical_to_virtual(tablePhysicalAddress);
     }
     else
     {
@@ -157,13 +173,27 @@ int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags
         pageTable = physical_to_virtual(tablePhysicalAddress);
     }
 
+    // Check if an existing mapping exists
+    if (pageTable[tableIdx] & PAGE_PRESENT)
+    {
+        return -3;
+    }
+
+    pageTable[tableIdx] = (physicalAddress & PAGE_ADDRESS_MASK) | (flags & ~PAGE_ADDRESS_MASK);
+
+    pageTable[tableIdx] |= PAGE_PRESENT;
+
+    paging_invalidate_page(virtualAddress);
+
     return 0;
 }
 
 int paging_unmap(uint32_t virtualAddress)
 {
     if (!page_address_valid(virtualAddress))
+    {
         return -1;
+    }
 
     uint32_t directoryIndex = PAGE_DIRECTORY_INDEX(virtualAddress);
 

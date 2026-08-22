@@ -189,6 +189,10 @@ b                                      split
               b + HEADER_SIZE            split
 ```
 
+### Memory Map
+
+#### Real mode address space
+
 ## Resources
 
 - [Building an OS](https://youtube.com/playlist?list=PLFjM7v6KGMpiH2G-kT781ByCNC_0pKpPN&si=Pr8kDEQrsbQuhrR4)

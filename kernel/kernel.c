@@ -92,13 +92,83 @@ static void spawner(void)
     task_exit();
 }
 
+static void physical_test(void)
+{
+    uint32_t a = physical_alloc_page();
+    uint32_t b = physical_alloc_page();
+    uint32_t c = physical_alloc_page();
+
+    fterminal_write("physical test:\n");
+
+    fterminal_write("  a = %x\n", a);
+    fterminal_write("  b = %x\n", b);
+    fterminal_write("  c = %x\n", c);
+
+    if (a == 0 || b == 0 || c == 0)
+    {
+        fterminal_write("  FAIL: allocation returned 0\n");
+        return;
+    }
+
+    if ((a & 0xFFFu) != 0 || (b & 0xFFFu) != 0 || (c & 0xFFFu) != 0)
+    {
+        fterminal_write("  FAIL: page is not aligned\n");
+        return;
+    }
+
+    if (a == b || a == c || b == c)
+    {
+        fterminal_write("  FAIL: duplicate page\n");
+        return;
+    }
+
+    if (a < 0x00200000u || b < 0x00200000u || c < 0x00200000u)
+    {
+        fterminal_write("  FAIL: page overlaps heap\n");
+        return;
+    }
+
+    physical_free_page(b);
+
+    uint32_t d = physical_alloc_page();
+
+    fterminal_write("  d = %x\n", d);
+
+    if (d != b)
+    {
+        fterminal_write("  FAIL: freed page was not reused\n");
+        return;
+    }
+
+    fterminal_write("  PASS\n");
+}
+
 void kmain(void)
 {
     terminal_init();
-    kmalloc_init();
-    physical_init();
 
-    terminal_write("Hello, from neilOS!\n");
+    fterminal_write("Hello, from neilOS!\n");
+
+    physical_init();
+    physical_test();
+
+    fterminal_write("Physical memory initialized!\n");
+
+    uint32_t page_a = physical_alloc_page();
+    uint32_t page_b = physical_alloc_page();
+    uint32_t page_c = physical_alloc_page();
+
+    fterminal_write("page_a = %x\n", page_a);
+    fterminal_write("page_b = %x\n", page_b);
+    fterminal_write("page_c = %x\n", page_c);
+
+    physical_free_page(page_b);
+
+    uint32_t page_d = physical_alloc_page();
+
+    fterminal_write("page_d = %x\n", page_d);
+
+    kmalloc_init();
 
 #ifdef DEBUG
     int* a = kmalloc(64);
@@ -109,50 +179,52 @@ void kmain(void)
 
         if ((a[0] + a[1]) == 3)
         {
-            terminal_write("kmalloc: OKAY!\n");
+            fterminal_write("kmalloc: OKAY!\n");
         }
         else
         {
-            terminal_write("kmalloc: failed!\n");
+            fterminal_write("kmalloc: failed!\n");
         }
 
         kfree(a);
     }
     else
     {
-        terminal_write("ERROR: kmalloc failed!\n");
+        fterminal_write("ERROR: kmalloc failed!\n");
     }
 #endif
 
     idt_init();
 
-    terminal_write("IDT initialized!\n");
+    fterminal_write("IDT initialized!\n");
 
     pic_init();
 
-    terminal_write("PIC initialized!\n");
+    fterminal_write("PIC initialized!\n");
 
     pit_init(PIT_FREQUENCY);
 
-    terminal_write("PIT initialized!\n");
+    fterminal_write("PIT initialized!\n");
 
     keyboard_init();
 
-    terminal_write("Keyboard initialized!\n");
+    fterminal_write("Keyboard initialized!\n");
 
     scheduler_init();
-    terminal_write("Scheduler initialized!\n");
+    fterminal_write("Scheduler initialized!\n");
 
-    terminal_write("Interrupts enabled!\n");
+    fterminal_write("Interrupts enabled!\n");
 
-    blockerID = task_create(blocker);
-    task_create(waker);
-    task_create(monitor);
-    task_create(task_a);
-    task_create(task_b);
-    task_create(spawner);
+#ifdef DEBUG
+    // blockerID = task_create(blocker);
+    // task_create(waker);
+    // task_create(monitor);
+    // task_create(task_a);
+    // task_create(task_b);
+    // task_create(spawner);
 
-    terminal_write("Tasks created!\n");
+    // fterminal_write("Tasks created!\n");
+#endif
 
     __asm__ volatile("sti");
 

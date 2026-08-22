@@ -14,10 +14,18 @@
 /// @brief Initializes the address space and enables paging
 void paging_init(void);
 
-/// @brief
+/// @brief Maps a virtual address to a physical address with the specified flags.
+///
+/// @param virtualAddress Virtual address to map.
+/// @param physicalAddress Physical address to map to.
+/// @param flags Page mapping flags controlling access and page attributes.
+/// @return 0 on success; otherwise an error code.
 int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags);
 
-/// @brief
+/// @brief Removes the page mapping for the specified virtual address.
+///
+/// @param virtualAddress Virtual address whose mapping should be removed.
+/// @return 0 on success; otherwise an error code.
 int paging_unmap(uint32_t virtualAddress);
 
 #endif // KERNEL_MM_PAGING_H
