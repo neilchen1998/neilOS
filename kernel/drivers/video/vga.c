@@ -1,6 +1,7 @@
 #include "vga.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -42,7 +43,7 @@ static uint16_t terminalBuffer[TERMINAL_LINES][VGA_WIDTH];
 static size_t cursorX = 0;
 static size_t cursorY = 0;
 static size_t viewportY = 0;
-static int renderPending = 0;
+static bool renderPending = 0;
 
 static void terminal_render(void)
 {
@@ -62,6 +63,7 @@ static void terminal_follow_cursor(void)
     if (cursorY >= viewportY + VGA_HEIGHT)
     {
         viewportY = cursorY - VGA_HEIGHT + 1;
+        renderPending = true;
     }
 }
 
@@ -78,7 +80,7 @@ static void terminal_flush(void)
     if (renderPending)
     {
         terminal_render();
-        renderPending = 0;
+        renderPending = false;
     }
 }
 
@@ -157,7 +159,7 @@ static void terminal_putchar_raw(char c)
         }
 
         cursorY = TERMINAL_LINES - 1;
-        renderPending = 1;
+        renderPending = true;
     }
 
     terminal_follow_cursor();
