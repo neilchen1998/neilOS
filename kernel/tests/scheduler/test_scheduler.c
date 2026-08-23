@@ -7,6 +7,7 @@
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 #include "scheduler/scheduler.h"
+#include "test_output.h"
 
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
@@ -27,23 +28,22 @@ static size_t blockerID = (size_t)-1;
 // @brief Prints the task that passes
 //
 // @param name The name of the task that passes
-static void test_pass(const char* name)
+static void test_pass_task(const char* name)
 {
     ++runningTestCnt;
     ++passedTestCnt;
-
-    fterminal_write("[PASS] %s\n", name);
+    test_pass("[PASS] %s\n", name);
 }
 
 // @brief Prints the task that fails
 //
 // @param name The name of the task that fails
-static void test_fail(const char* name)
+static void test_fail_task(const char* name)
 {
     ++runningTestCnt;
     ++failedTestCnt;
 
-    fterminal_write("[FAIL] %s\n", name);
+    test_fail("[FAIL] %s\n", name);
 }
 
 // @brief A task that increases cntA and NEVER yields.
@@ -87,11 +87,11 @@ static void monitor()
     // If either one of the counters is zero, that means this test fails
     if (cntA == 0 || cntB == 0)
     {
-        test_fail("preemptive scheduling");
+        test_fail("preemptive scheduling\n");
     }
     else
     {
-        test_pass("preemptive scheduling");
+        test_pass("preemptive scheduling\n");
     }
 
     task_exit();
@@ -138,7 +138,7 @@ static void waker(void)
 
     if (result < 0)
     {
-        test_fail("task_unblock");
+        test_fail("task_unblock\n");
     }
     else
     {
@@ -152,11 +152,11 @@ static void waker(void)
 
         if (blockerWoke)
         {
-            test_pass("task block/unblock");
+            test_pass("task block/unblock\n");
         }
         else
         {
-            test_fail("task block/unblock");
+            test_fail("task block/unblock\n");
         }
     }
 
@@ -198,11 +198,11 @@ static void spawner(void)
 
     if (shortLiveTaskCnt == 0)
     {
-        test_fail("short-lived task creation/execution");
+        test_fail("short-lived task creation/execution\n");
     }
     else
     {
-        test_pass("short-lived task creation/execution");
+        test_pass("short-lived task creation/execution\n");
     }
 
     task_exit();
@@ -242,11 +242,11 @@ static void yield_test_monitor(void)
 
     if (yieldA == 0 || yieldB == 0)
     {
-        test_fail("task_yield");
+        test_fail("task_yield\n");
     }
     else
     {
-        test_pass("task_yield");
+        test_pass("task_yield\n");
     }
 
     task_exit();
@@ -272,11 +272,12 @@ static void test_result(void)
 
     if (failedTestCnt == 0)
     {
-        fterminal_write("\n=== ALL TESTS PASSED ===\n");
+        test_pass("\n=== ALL TESTS PASSED ===\n");
     }
     else
     {
-        fterminal_write("\n=== TESTS FAILED ===\n");
+
+        test_fail("\n=== TESTS FAILED ===\n");
     }
 
     task_exit();
@@ -294,56 +295,56 @@ void scheduler_test(void)
 
     if (blockerID == (size_t)-1)
     {
-        test_fail("create blocker task");
+        test_fail("create blocker task\n");
     }
 
     if (task_create(waker) < 0)
     {
-        test_fail("create waker task");
+        test_fail("create waker task\n");
     }
 
     // Preemption test
     if (task_create(monitor) < 0)
     {
-        test_fail("create preemption monitor");
+        test_fail("create preemption monitor\n");
     }
 
     if (task_create(task_a) < 0)
     {
-        test_fail("create task A");
+        test_fail("create task A\n");
     }
 
     if (task_create(task_b) < 0)
     {
-        test_fail("create task B");
+        test_fail("create task B\n");
     }
 
     // Task creation / termination test
     if (task_create(spawner) < 0)
     {
-        test_fail("create spawner task");
+        test_fail("create spawner task\n");
     }
 
     // Cooperative yield test
     if (task_create(yield_task_a) < 0)
     {
-        test_fail("create yield task A");
+        test_fail("create yield task A\n");
     }
 
     if (task_create(yield_task_b) < 0)
     {
-        test_fail("create yield task B");
+        test_fail("create yield task B\n");
     }
 
     if (task_create(yield_test_monitor) < 0)
     {
-        test_fail("create yield monitor");
+        test_fail("create yield monitor\n");
     }
 
     // Print the final result after the tests have had time to run
     if (task_create(test_result) < 0)
     {
         // Test result task can not be created so we just print failed
-        fterminal_write("\n=== FAILED TO CREATE TEST RESULT TASK ===\n");
+        test_fail("\n=== FAILED TO CREATE TEST RESULT TASK ===\n");
     }
 }

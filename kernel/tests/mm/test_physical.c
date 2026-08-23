@@ -5,6 +5,7 @@
 
 #include "drivers/video/vga.h"
 #include "mm/physical.h"
+#include "test_output.h"
 
 void physical_test(void)
 {
@@ -20,25 +21,25 @@ void physical_test(void)
 
     if (a == 0 || b == 0 || c == 0)
     {
-        fterminal_write("  FAIL: allocation returned 0\n");
+        test_fail("  FAIL: allocation returned 0\n");
         return;
     }
 
     if ((a & 0xFFFu) != 0 || (b & 0xFFFu) != 0 || (c & 0xFFFu) != 0)
     {
-        fterminal_write("  FAIL: page is not aligned\n");
+        test_fail("  FAIL: page is not aligned\n");
         return;
     }
 
     if (a == b || a == c || b == c)
     {
-        fterminal_write("  FAIL: duplicate page\n");
+        test_fail("  FAIL: duplicate page\n");
         return;
     }
 
     if (a < 0x00200000u || b < 0x00200000u || c < 0x00200000u)
     {
-        fterminal_write("  FAIL: page overlaps heap\n");
+        test_fail("  FAIL: page overlaps heap\n");
         return;
     }
 
@@ -50,9 +51,9 @@ void physical_test(void)
 
     if (d != b)
     {
-        fterminal_write("  FAIL: freed page was not reused\n");
+        test_fail("  FAIL: freed page was not reused\n");
         return;
     }
 
-    fterminal_write("  PASS\n");
+    test_pass("PHYSICAL TEST  PASS\n");
 }

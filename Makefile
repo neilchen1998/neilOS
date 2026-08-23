@@ -172,6 +172,7 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 	kernel/scheduler/scheduler.c
 
 KERNEL_TEST_C_SOURCES := \
+	kernel/tests/common/test_output.c \
 	kernel/tests/tests.c \
 	kernel/tests/mm/test_kmalloc.c \
 	kernel/tests/mm/test_paging.c \
@@ -197,7 +198,7 @@ KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 KERNEL_TEST_BIN := $(KERNEL_TEST_DIR)/kernel.bin
 
 KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel -MMD -MP
-KERNEL_TEST_CFLAGS := $(KERNEL_CFLAGS) -DKERNEL_TESTS
+KERNEL_TEST_CFLAGS := $(KERNEL_CFLAGS) -DKERNEL_TESTS -Ikernel/tests/common
 
 KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
 
