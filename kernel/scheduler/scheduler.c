@@ -6,7 +6,7 @@
 #include "arch/x86/idt.h"
 #include "arch/x86/io.h"
 
-#define MAX_TASKS 10
+#define MAX_TASKS 16
 #define MAX_USER_TASKS ((MAX_TASKS) - 1)
 #define STACK_SIZE 4096
 #define TIME_SLICE_MS 10

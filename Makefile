@@ -173,22 +173,25 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 
 KERNEL_TEST_C_SOURCES := \
 	kernel/tests/tests.c \
-	kernel/tests/mm/test_physical.c
+	kernel/tests/mm/test_physical.c \
+	kernel/tests/scheduler/test_scheduler.c
 
 KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/isr.asm
 
 KERNEL_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_DIR)/%.o,$(KERNEL_C_SOURCES))
 KERNEL_TEST_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_C_SOURCES)) \
 	$(patsubst kernel/%.c,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_TEST_C_SOURCES))
+
 KERNEL_ASM_OBJS := $(patsubst kernel/%.asm,$(KERNEL_DIR)/%.o,$(KERNEL_ASM_SOURCES))
+KERNEL_TEST_ASM_OBJS := $(patsubst kernel/%.asm,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_ASM_SOURCES))
 
 KERNEL_PROD_OBJS := $(KERNEL_C_OBJS) $(KERNEL_ASM_OBJS)
-KERNEL_TEST_OBJS := $(KERNEL_PROD_OBJS) $(KERNEL_TEST_C_OBJS)
+KERNEL_TEST_OBJS := $(KERNEL_TEST_C_OBJS) $(KERNEL_TEST_ASM_OBJS)
 
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
-KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
-
 KERNEL_TEST_ELF := $(KERNEL_TEST_DIR)/kernel.elf
+
+KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 KERNEL_TEST_BIN := $(KERNEL_TEST_DIR)/kernel.bin
 
 KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel -MMD -MP
