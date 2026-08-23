@@ -5,6 +5,7 @@
 
 #include "drivers/video/vga.h"
 #include "mm/kmalloc.h"
+#include "test_output.h"
 
 void kmalloc_test(void)
 {
@@ -29,7 +30,7 @@ void kmalloc_test(void)
         return;
     }
 
-    fterminal_write("kmalloc: basic allocation OK\n");
+    test_pass("kmalloc: basic allocation OK\n");
 
     /* Test 2: Multiple allocations */
     int* b = kmalloc(128);
@@ -37,7 +38,7 @@ void kmalloc_test(void)
 
     if (!b || !c)
     {
-        fterminal_write("kmalloc: FAIL - multiple allocations\n");
+        test_fail("kmalloc: FAIL - multiple allocations\n");
 
         if (b)
             kfree(b);
@@ -53,14 +54,14 @@ void kmalloc_test(void)
 
     if (b[0] != 111 || c[0] != 222)
     {
-        fterminal_write("kmalloc: FAIL - multiple allocation data\n        ");
+        test_fail("kmalloc: FAIL - multiple allocation data\n        ");
         kfree(a);
         kfree(b);
         kfree(c);
         return;
     }
 
-    fterminal_write("kmalloc: multiple allocations OK\n");
+    test_pass("kmalloc: multiple allocations OK\n");
 
     /* Test 3: Verify blocks don't overlap */
     a[0] = 10;
@@ -69,14 +70,14 @@ void kmalloc_test(void)
 
     if (a[0] != 10 || b[0] != 20 || c[0] != 30)
     {
-        fterminal_write("kmalloc: FAIL - allocation overlap\n");
+        test_fail("kmalloc: FAIL - allocation overlap\n");
         kfree(a);
         kfree(b);
         kfree(c);
         return;
     }
 
-    fterminal_write("kmalloc: isolation OK\n");
+    test_pass("kmalloc: isolation OK\n");
 
     /* Test 4: Free and allocate again */
     kfree(b);
@@ -85,7 +86,7 @@ void kmalloc_test(void)
 
     if (!d)
     {
-        fterminal_write("kmalloc: FAIL - allocation after free\n");
+        test_fail("kmalloc: FAIL - allocation after free\n");
         kfree(a);
         kfree(c);
         return;
@@ -95,19 +96,19 @@ void kmalloc_test(void)
 
     if (d[0] != 444)
     {
-        fterminal_write("kmalloc: FAIL - reuse after free\n");
+        test_fail("kmalloc: FAIL - reuse after free\n");
         kfree(a);
         kfree(c);
         kfree(d);
         return;
     }
 
-    fterminal_write("kmalloc: free/reuse OK\n");
+    test_pass("kmalloc: free/reuse OK\n");
 
     /* Clean up */
     kfree(a);
     kfree(c);
     kfree(d);
 
-    fterminal_write("kmalloc: ALL TESTS PASSED!\n");
+    test_pass("kmalloc: ALL TESTS PASSED!\n");
 }
