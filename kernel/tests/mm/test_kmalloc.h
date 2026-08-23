@@ -1,0 +1,6 @@
+#ifndef KERNEL_TESTS_MM_TEST_KMALLOC_H
+#define KERNEL_TESTS_MM_TEST_KMALLOC_H
+
+void kmalloc_test(void);
+
+#endif // KERNEL_TESTS_MM_TEST_KMALLOC_H

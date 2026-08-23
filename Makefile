@@ -173,6 +173,8 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 
 KERNEL_TEST_C_SOURCES := \
 	kernel/tests/tests.c \
+	kernel/tests/mm/test_kmalloc.c \
+	kernel/tests/mm/test_paging.c \
 	kernel/tests/mm/test_physical.c \
 	kernel/tests/scheduler/test_scheduler.c
 
@@ -237,7 +239,7 @@ run: image
 	qemu-system-i386 -fda $(PROD_IMAGE) -serial stdio
 
 run-tests: tests
-	qemu-system-i386 -fda $(TEST_IMAGE) -serial stdio
+	qemu-system-i386 -fda $(TEST_IMAGE) -serial stdio 2>&1 | tee test-output.txt
 
 debug: image
 	qemu-system-i386 -fda $(PROD_IMAGE) -s -S

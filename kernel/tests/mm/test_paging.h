@@ -1,0 +1,6 @@
+#ifndef KERNEL_TESTS_MM_TEST_PAGING_H
+#define KERNEL_TESTS_MM_TEST_PAGING_H
+
+void paging_test(void);
+
+#endif // KERNEL_TESTS_MM_TEST_PAGING_H
