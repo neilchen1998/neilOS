@@ -11,6 +11,10 @@
 #include "mm/physical.h"
 #include "scheduler/scheduler.h"
 
+#ifdef KERNEL_TESTS
+#include "tests/tests.h"
+#endif
+
 static volatile uint32_t cntA = 0;
 static volatile uint32_t cntB = 0;
 
@@ -93,57 +97,6 @@ static void spawner(void)
     task_exit();
 }
 
-static void physical_test(void)
-{
-    uint32_t a = physical_alloc_page();
-    uint32_t b = physical_alloc_page();
-    uint32_t c = physical_alloc_page();
-
-    fterminal_write("physical test:\n");
-
-    fterminal_write("  a = %x\n", a);
-    fterminal_write("  b = %x\n", b);
-    fterminal_write("  c = %x\n", c);
-
-    if (a == 0 || b == 0 || c == 0)
-    {
-        fterminal_write("  FAIL: allocation returned 0\n");
-        return;
-    }
-
-    if ((a & 0xFFFu) != 0 || (b & 0xFFFu) != 0 || (c & 0xFFFu) != 0)
-    {
-        fterminal_write("  FAIL: page is not aligned\n");
-        return;
-    }
-
-    if (a == b || a == c || b == c)
-    {
-        fterminal_write("  FAIL: duplicate page\n");
-        return;
-    }
-
-    if (a < 0x00200000u || b < 0x00200000u || c < 0x00200000u)
-    {
-        fterminal_write("  FAIL: page overlaps heap\n");
-        return;
-    }
-
-    physical_free_page(b);
-
-    uint32_t d = physical_alloc_page();
-
-    fterminal_write("  d = %x\n", d);
-
-    if (d != b)
-    {
-        fterminal_write("  FAIL: freed page was not reused\n");
-        return;
-    }
-
-    fterminal_write("  PASS\n");
-}
-
 void kmain(void)
 {
     terminal_init();
@@ -151,7 +104,10 @@ void kmain(void)
     fterminal_write("Hello, from neilOS!\n");
 
     physical_init();
-    physical_test();
+
+#ifdef KERNEL_TESTS
+    kernel_tests_run();
+#endif
 
     fterminal_write("Physical memory initialized!\n");
 

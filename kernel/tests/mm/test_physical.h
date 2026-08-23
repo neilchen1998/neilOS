@@ -1,0 +1,6 @@
+#ifndef KERNEL_TESTS_MM_TEST_PHYSICAL_H
+#define KERNEL_TESTS_MM_TEST_PHYSICAL_H
+
+void physical_test(void);
+
+#endif // KERNEL_TESTS_MM_TEST_PHYSICAL_H

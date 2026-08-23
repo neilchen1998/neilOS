@@ -6,22 +6,29 @@ OBJCOPY  := objcopy
 BUILD := _build
 
 # Binary files
+PROD_IMAGE := $(BUILD)/neilOS.img
+TEST_IMAGE := $(BUILD)/neilOS-test.img
+
 STAGE1_BIN := $(BUILD)/boot/stage1/stage1.bin
 STAGE2_BIN := $(BUILD)/boot/stage2/stage2.bin
-KERNEL_BIN := $(BUILD)/kernel/kernel.bin
-IMAGE := $(BUILD)/neilOS.img
+
+KERNEL_BIN      := $(BUILD)/kernel/kernel.bin
+KERNEL_TEST_BIN := $(BUILD)/kernel-test/kernel.bin
+
 
 # All
-.PHONY: all image clean run debug
+.PHONY: all image tests run run-tests debug debug-tests clean
 all: image
 
+image: $(PROD_IMAGE)
+
+tests: $(TEST_IMAGE)
 
 # Disk image
-image: $(IMAGE)
-$(IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_BIN)
+$(PROD_IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_BIN)
 	@mkdir -p $(BUILD)
 
-	@echo "Creating floppy image"
+	@echo "Creating production floppy image"
 	dd if=/dev/zero of=$@ bs=512 count=2880
 
 	@echo "Formatting FAT12"
@@ -35,6 +42,24 @@ $(IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_BIN)
 
 	@echo "Installing kernel"
 	mcopy -i $@ $(KERNEL_BIN) "::kernel"
+
+$(TEST_IMAGE): $(STAGE1_BIN) $(STAGE2_BIN) $(KERNEL_TEST_BIN)
+	@mkdir -p $(dir $@)
+
+	@echo "Creating test floppy image"
+	dd if=/dev/zero of=$@ bs=512 count=2880
+
+	@echo "Formatting FAT12"
+	mkfs.fat -F 12 -n "NEILOS" $@
+
+	@echo "Installing stage1"
+	dd if=$(STAGE1_BIN) of=$@ bs=512 count=1 conv=notrunc
+
+	@echo "Installing stage2"
+	dd if=$(STAGE2_BIN) of=$@ bs=512 seek=2864 conv=notrunc
+
+	@echo "Installing test kernel"
+	mcopy -i $@ $(KERNEL_TEST_BIN) "::kernel"
 
 
 # Stage 1
@@ -130,7 +155,8 @@ $(STAGE2_BIN): $(STAGE2_DIR)/stage2.elf
 
 
 # Kernel
-KERNEL_DIR := $(BUILD)/kernel
+KERNEL_DIR      := $(BUILD)/kernel
+KERNEL_TEST_DIR := $(BUILD)/kernel-test
 
 KERNEL_LD := kernel/linker.ld
 
@@ -145,17 +171,28 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 	kernel/mm/physical.c \
 	kernel/scheduler/scheduler.c
 
+KERNEL_TEST_C_SOURCES := \
+	kernel/tests/tests.c \
+	kernel/tests/mm/test_physical.c
+
 KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/isr.asm
 
 KERNEL_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_DIR)/%.o,$(KERNEL_C_SOURCES))
+KERNEL_TEST_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_C_SOURCES)) \
+	$(patsubst kernel/%.c,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_TEST_C_SOURCES))
 KERNEL_ASM_OBJS := $(patsubst kernel/%.asm,$(KERNEL_DIR)/%.o,$(KERNEL_ASM_SOURCES))
 
-KERNEL_OBJS := $(KERNEL_C_OBJS) $(KERNEL_ASM_OBJS)
+KERNEL_PROD_OBJS := $(KERNEL_C_OBJS) $(KERNEL_ASM_OBJS)
+KERNEL_TEST_OBJS := $(KERNEL_PROD_OBJS) $(KERNEL_TEST_C_OBJS)
 
 KERNEL_ELF := $(KERNEL_DIR)/kernel.elf
 KERNEL_BIN := $(KERNEL_DIR)/kernel.bin
 
+KERNEL_TEST_ELF := $(KERNEL_TEST_DIR)/kernel.elf
+KERNEL_TEST_BIN := $(KERNEL_TEST_DIR)/kernel.bin
+
 KERNEL_CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Ikernel -MMD -MP
+KERNEL_TEST_CFLAGS := $(KERNEL_CFLAGS) -DKERNEL_TESTS
 
 KERNEL_LDFLAGS := -m elf_i386 -T $(KERNEL_LD)
 
@@ -167,21 +204,43 @@ $(KERNEL_DIR)/%.o: kernel/%.asm
 	@mkdir -p $(@D)
 	$(ASM) -f elf32 $< -o $@
 
-$(KERNEL_ELF): $(KERNEL_OBJS) $(KERNEL_LD)
+$(KERNEL_TEST_DIR)/%.o: kernel/%.c
 	@mkdir -p $(@D)
-	$(LD) $(KERNEL_LDFLAGS) -o $@ $(KERNEL_OBJS)
+	$(CC) $(KERNEL_TEST_CFLAGS) -c $< -o $@
+
+$(KERNEL_TEST_DIR)/%.o: kernel/%.asm
+	@mkdir -p $(@D)
+	$(ASM) -f elf32 $< -o $@
+
+$(KERNEL_ELF): $(KERNEL_PROD_OBJS) $(KERNEL_LD)
+	@mkdir -p $(@D)
+	$(LD) $(KERNEL_LDFLAGS) -o $@ $(KERNEL_PROD_OBJS)
+
+$(KERNEL_TEST_ELF): $(KERNEL_TEST_OBJS) $(KERNEL_LD)
+	@mkdir -p $(@D)
+	$(LD) $(KERNEL_LDFLAGS) -o $@ $(KERNEL_TEST_OBJS)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
+	@mkdir -p $(@D)
+	$(OBJCOPY) -O binary $< $@
+
+$(KERNEL_TEST_BIN): $(KERNEL_TEST_ELF)
 	@mkdir -p $(@D)
 	$(OBJCOPY) -O binary $< $@
 
 
 # Development
 run: image
-	qemu-system-i386 -fda $(IMAGE) -serial stdio
+	qemu-system-i386 -fda $(PROD_IMAGE) -serial stdio
+
+run-tests: tests
+	qemu-system-i386 -fda $(TEST_IMAGE) -serial stdio
 
 debug: image
-	qemu-system-i386 -fda $(IMAGE) -s -S
+	qemu-system-i386 -fda $(PROD_IMAGE) -s -S
+
+debug-tests: tests
+	qemu-system-i386 -fda $(TEST_IMAGE) -s -S
 
 
 # Auto-generated header dependencies
