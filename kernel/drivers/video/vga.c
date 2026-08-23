@@ -282,8 +282,14 @@ void terminal_scroll_down(void)
 
 void terminal_page_up(void)
 {
-    // Check if the current viewpoint is greater than the VGA height
-    viewportY -= (viewportY >= VGA_HEIGHT) ? VGA_HEIGHT : 0;
+    if (viewportY >= VGA_HEIGHT)
+    {
+        viewportY -= VGA_HEIGHT;
+    }
+    else
+    {
+        viewportY = 0;
+    }
 
     terminal_render();
 }
@@ -299,7 +305,6 @@ void terminal_page_down(void)
 
     viewportY += VGA_HEIGHT;
 
-    // Clamp the viewport
     if (viewportY > maxViewport)
     {
         viewportY = maxViewport;
