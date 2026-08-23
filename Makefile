@@ -239,7 +239,7 @@ run: image
 	qemu-system-i386 -fda $(PROD_IMAGE) -serial stdio
 
 run-tests: tests
-	qemu-system-i386 -fda $(TEST_IMAGE) -serial stdio 2>&1 | tee test-output.txt
+	qemu-system-i386 -fda $(TEST_IMAGE) -serial stdio
 
 debug: image
 	qemu-system-i386 -fda $(PROD_IMAGE) -s -S
@@ -251,6 +251,7 @@ debug-tests: tests
 # Auto-generated header dependencies
 -include $(STAGE2_DIR)/stage2.d $(STAGE2_LIB_OBJ:.o=.d)
 -include $(KERNEL_C_OBJS:.o=.d)
+-include $(KERNEL_TEST_C_OBJS:.o=.d)
 
 
 # Clean
