@@ -14,24 +14,6 @@
 
 #define VGA_MEMORY ((volatile uint16_t*)0xB8000)
 
-// Colours
-#define VGA_BLACK 0x0
-#define VGA_BLUE 0x1
-#define VGA_GREEN 0x2
-#define VGA_CYAN 0x3
-#define VGA_RED 0x4
-#define VGA_MAGENTA 0x5
-#define VGA_BROWN 0x6
-#define VGA_LIGHT_GRAY 0x7
-#define VGA_DARK_GRAY 0x8
-#define VGA_LIGHT_BLUE 0x9
-#define VGA_LIGHT_GREEN 0xA
-#define VGA_LIGHT_CYAN 0xB
-#define VGA_LIGHT_RED 0xC
-#define VGA_LIGHT_MAGENTA 0xD
-#define VGA_YELLOW 0xE
-#define VGA_WHITE 0xF
-
 #define VGA_AT(row, col) VGA_MEMORY[(row) * VGA_WIDTH + (col)]
 
 #define VGA_COLOR(fg, bg) ((uint8_t)(fg) | ((uint8_t)(bg) << 4))
@@ -44,6 +26,7 @@ static size_t cursorX = 0;
 static size_t cursorY = 0;
 static size_t viewportY = 0;
 static bool renderPending = 0;
+static uint8_t terminalColor = VGA_COLOR(VGA_WHITE, VGA_BLACK);
 
 static void terminal_render(void)
 {
@@ -124,8 +107,10 @@ static void terminal_putchar_raw(char c)
     }
     default:
     {
-        terminalBuffer[cursorY][cursorX] = VGA_ENTRY(c, VGA_WHITE, VGA_BLACK);
-        terminal_write_cell(cursorY, cursorX, VGA_ENTRY(c, VGA_WHITE, VGA_BLACK));
+        uint16_t entry = (uint16_t)(uint8_t)c | ((uint16_t)terminalColor << 8);
+
+        terminalBuffer[cursorY][cursorX] = entry;
+        terminal_write_cell(cursorY, cursorX, entry);
 
         ++cursorX;
 
@@ -210,6 +195,21 @@ static int terminal_print_signed(int value)
     }
 
     return cnt + terminal_print_unsigned(mag, 10u);
+}
+
+void terminal_set_color(uint8_t fg, uint8_t bg)
+{
+    terminalColor = VGA_COLOR(fg, bg);
+}
+
+void terminal_set_foreground(uint8_t fg)
+{
+    terminalColor = VGA_COLOR(fg, terminalColor >> 4);
+}
+
+void terminal_set_background(uint8_t bg)
+{
+    terminalColor = VGA_COLOR(terminalColor & 0x0F, bg);
 }
 
 void terminal_clear()
