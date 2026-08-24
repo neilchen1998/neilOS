@@ -179,7 +179,7 @@ KERNEL_TEST_C_SOURCES := \
 	kernel/tests/mm/test_physical.c \
 	kernel/tests/scheduler/test_scheduler.c
 
-KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/isr.asm
+KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/gdt.asm kernel/arch/x86/isr.asm
 
 KERNEL_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_DIR)/%.o,$(KERNEL_C_SOURCES))
 KERNEL_TEST_C_OBJS := $(patsubst kernel/%.c,$(KERNEL_TEST_DIR)/%.o,$(KERNEL_C_SOURCES)) \

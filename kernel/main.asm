@@ -11,9 +11,17 @@ extern kmain
 extern __bss_start
 extern __bss_end
 
+extern gdt_flush
+extern kernel_gdtr
+
 _start:
 
     cli
+
+    ; Install the kernel's permanent GDT
+    push dword kernel_gdtr
+    call gdt_flush
+    add esp, 4
 
     ; Establish memory/data env
     mov ax, DATA_SEL
