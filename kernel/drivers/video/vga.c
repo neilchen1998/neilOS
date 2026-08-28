@@ -268,14 +268,14 @@ void terminal_scroll_down(void)
 {
     size_t maxViewport = 0;
 
-    if (cursorY >= TERMINAL_LINES)
+    if (cursorY >= VGA_HEIGHT)
     {
         maxViewport = cursorY - VGA_HEIGHT + 1;
     }
 
     if (viewportY < maxViewport)
     {
-        viewportY++;
+        ++viewportY;
         terminal_render();
     }
 }
