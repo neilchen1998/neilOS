@@ -26,9 +26,9 @@ static size_t cursorX = 0;
 static size_t cursorY = 0;
 static size_t viewportY = 0;
 static bool renderPending = 0;
-static uint8_t terminalColor = VGA_COLOR(VGA_WHITE, VGA_BLACK);
+static uint8_t vgaColor = VGA_COLOR(VGA_WHITE, VGA_BLACK);
 
-static void terminal_render(void)
+static void vga_render(void)
 {
     for (size_t screenY = 0; screenY < VGA_HEIGHT; ++screenY)
     {
@@ -41,7 +41,7 @@ static void terminal_render(void)
     }
 }
 
-static void terminal_follow_cursor(void)
+static void vga_follow_cursor(void)
 {
     if (cursorY >= viewportY + VGA_HEIGHT)
     {
@@ -50,7 +50,7 @@ static void terminal_follow_cursor(void)
     }
 }
 
-static void terminal_write_cell(size_t bufferY, size_t x, uint16_t entry)
+static void vga_write_cell(size_t bufferY, size_t x, uint16_t entry)
 {
     if (!renderPending && bufferY >= viewportY && bufferY < viewportY + VGA_HEIGHT)
     {
@@ -58,16 +58,16 @@ static void terminal_write_cell(size_t bufferY, size_t x, uint16_t entry)
     }
 }
 
-static void terminal_flush(void)
+static void vga_flush(void)
 {
     if (renderPending)
     {
-        terminal_render();
+        vga_render();
         renderPending = false;
     }
 }
 
-static void terminal_putchar_raw(char c)
+static void vga_putchar_raw(char c)
 {
     switch (c)
     {
@@ -101,16 +101,16 @@ static void terminal_putchar_raw(char c)
         {
             --cursorX;
             terminalBuffer[cursorY][cursorX] = VGA_CLEAR;
-            terminal_write_cell(cursorY, cursorX, VGA_CLEAR);
+            vga_write_cell(cursorY, cursorX, VGA_CLEAR);
         }
         break;
     }
     default:
     {
-        uint16_t entry = (uint16_t)(uint8_t)c | ((uint16_t)terminalColor << 8);
+        uint16_t entry = (uint16_t)(uint8_t)c | ((uint16_t)vgaColor << 8);
 
         terminalBuffer[cursorY][cursorX] = entry;
-        terminal_write_cell(cursorY, cursorX, entry);
+        vga_write_cell(cursorY, cursorX, entry);
 
         ++cursorX;
 
@@ -147,10 +147,10 @@ static void terminal_putchar_raw(char c)
         renderPending = true;
     }
 
-    terminal_follow_cursor();
+    vga_follow_cursor();
 }
 
-static int terminal_print_unsigned(unsigned int value, unsigned int base)
+static int vga_print_unsigned(unsigned int value, unsigned int base)
 {
     char buffer[16];
     const char* digits = "0123456789abcdef";
@@ -159,7 +159,7 @@ static int terminal_print_unsigned(unsigned int value, unsigned int base)
 
     if (value == 0u)
     {
-        terminal_putchar_raw('0');
+        vga_putchar_raw('0');
         return 1;
     }
 
@@ -171,21 +171,21 @@ static int terminal_print_unsigned(unsigned int value, unsigned int base)
 
     while (idx > 0)
     {
-        terminal_putchar_raw(buffer[--idx]);
+        vga_putchar_raw(buffer[--idx]);
         ++cnt;
     }
 
     return cnt;
 }
 
-static int terminal_print_signed(int value)
+static int vga_print_signed(int value)
 {
     unsigned int mag;
     int cnt = 0;
 
     if (value < 0)
     {
-        terminal_putchar_raw('-');
+        vga_putchar_raw('-');
         ++cnt;
         mag = (unsigned int)(-(value + 1)) + 1u; // two's complement
     }
@@ -194,25 +194,25 @@ static int terminal_print_signed(int value)
         mag = (unsigned int)value;
     }
 
-    return cnt + terminal_print_unsigned(mag, 10u);
+    return cnt + vga_print_unsigned(mag, 10u);
 }
 
-void terminal_set_color(uint8_t fg, uint8_t bg)
+void vga_set_color(uint8_t fg, uint8_t bg)
 {
-    terminalColor = VGA_COLOR(fg, bg);
+    vgaColor = VGA_COLOR(fg, bg);
 }
 
-void terminal_set_foreground(uint8_t fg)
+void vga_set_foreground(uint8_t fg)
 {
-    terminalColor = VGA_COLOR(fg, terminalColor >> 4);
+    vgaColor = VGA_COLOR(fg, vgaColor >> 4);
 }
 
-void terminal_set_background(uint8_t bg)
+void vga_set_background(uint8_t bg)
 {
-    terminalColor = VGA_COLOR(terminalColor & 0x0F, bg);
+    vgaColor = VGA_COLOR(vgaColor & 0x0F, bg);
 }
 
-void terminal_clear()
+void vga_clear()
 {
     for (size_t y = 0; y < TERMINAL_LINES; ++y)
     {
@@ -235,36 +235,36 @@ void terminal_clear()
     }
 }
 
-void terminal_putchar(char c)
+void vga_putchar(char c)
 {
     uint32_t flags = irq_save();
-    terminal_putchar_raw(c);
-    terminal_flush();
+    vga_putchar_raw(c);
+    vga_flush();
     irq_restore(flags);
 }
 
-void terminal_write(const char* str)
+void vga_write(const char* str)
 {
     uint32_t flags = irq_save();
     while (*str)
     {
-        terminal_putchar_raw(*str);
+        vga_putchar_raw(*str);
         ++str;
     }
-    terminal_flush();
+    vga_flush();
     irq_restore(flags);
 }
 
-void terminal_scroll_up(void)
+void vga_scroll_up(void)
 {
     if (viewportY > 0)
     {
         viewportY--;
-        terminal_render();
+        vga_render();
     }
 }
 
-void terminal_scroll_down(void)
+void vga_scroll_down(void)
 {
     size_t maxViewport = 0;
 
@@ -276,11 +276,11 @@ void terminal_scroll_down(void)
     if (viewportY < maxViewport)
     {
         ++viewportY;
-        terminal_render();
+        vga_render();
     }
 }
 
-void terminal_page_up(void)
+void vga_page_up(void)
 {
     if (viewportY >= VGA_HEIGHT)
     {
@@ -291,10 +291,10 @@ void terminal_page_up(void)
         viewportY = 0;
     }
 
-    terminal_render();
+    vga_render();
 }
 
-void terminal_page_down(void)
+void vga_page_down(void)
 {
     size_t maxViewport = 0;
 
@@ -310,15 +310,15 @@ void terminal_page_down(void)
         viewportY = maxViewport;
     }
 
-    terminal_render();
+    vga_render();
 }
 
-void terminal_init(void)
+void vga_init(void)
 {
-    terminal_clear();
+    vga_clear();
 }
 
-int vterminal_write(const char* fmt, va_list args)
+int vvga_write(const char* fmt, va_list args)
 {
     int cnt = 0;
 
@@ -327,7 +327,7 @@ int vterminal_write(const char* fmt, va_list args)
         // Ordinary characters are written directly
         if (*fmt != '%')
         {
-            terminal_putchar_raw(*fmt++);
+            vga_putchar_raw(*fmt++);
             ++cnt;
             continue;
         }
@@ -343,13 +343,13 @@ int vterminal_write(const char* fmt, va_list args)
         }
         case '%':
         {
-            terminal_putchar_raw('%');
+            vga_putchar_raw('%');
             ++cnt;
             break;
         }
         case 'c':
         {
-            terminal_putchar_raw(va_arg(args, int));
+            vga_putchar_raw(va_arg(args, int));
             ++cnt;
             break;
         }
@@ -363,7 +363,7 @@ int vterminal_write(const char* fmt, va_list args)
 
             while (*str != '\0')
             {
-                terminal_putchar_raw(*str++);
+                vga_putchar_raw(*str++);
                 ++cnt;
             }
             break;
@@ -371,26 +371,26 @@ int vterminal_write(const char* fmt, va_list args)
         case 'd':
         case 'i':
         {
-            cnt += terminal_print_signed(va_arg(args, int));
+            cnt += vga_print_signed(va_arg(args, int));
             break;
         }
         case 'u':
         {
-            cnt += terminal_print_unsigned(va_arg(args, unsigned int), 10u);
+            cnt += vga_print_unsigned(va_arg(args, unsigned int), 10u);
             break;
         }
         case 'x':
         {
-            terminal_putchar_raw('0');
-            terminal_putchar_raw('x');
+            vga_putchar_raw('0');
+            vga_putchar_raw('x');
             cnt += 2;
-            cnt += terminal_print_unsigned(va_arg(args, unsigned int), 16u);
+            cnt += vga_print_unsigned(va_arg(args, unsigned int), 16u);
             break;
         }
         default:
         {
-            terminal_putchar_raw('%');
-            terminal_putchar_raw(*fmt);
+            vga_putchar_raw('%');
+            vga_putchar_raw(*fmt);
             cnt += 2;
             break;
         }
@@ -403,16 +403,16 @@ int vterminal_write(const char* fmt, va_list args)
     return cnt;
 }
 
-int fterminal_write(const char* fmt, ...)
+int fvga_write(const char* fmt, ...)
 {
     int cnt;
     va_list args;
 
     uint32_t flags = irq_save();
     va_start(args, fmt);
-    cnt = vterminal_write(fmt, args);
+    cnt = vvga_write(fmt, args);
     va_end(args);
-    terminal_flush();
+    vga_flush();
     irq_restore(flags);
 
     return cnt;

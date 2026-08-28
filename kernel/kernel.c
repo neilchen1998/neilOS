@@ -17,36 +17,36 @@
 
 void kmain(void)
 {
-    terminal_init();
+    vga_init();
 
-    fterminal_write("Hello, from neilOS!\n");
+    fvga_write("Hello, from neilOS!\n");
 
     physical_init();
 
-    fterminal_write("Physical memory initialized!\n");
+    fvga_write("Physical memory initialized!\n");
 
     kmalloc_init();
 
     idt_init();
-    fterminal_write("IDT initialized!\n");
+    fvga_write("IDT initialized!\n");
 
     pic_init();
-    fterminal_write("PIC initialized!\n");
+    fvga_write("PIC initialized!\n");
 
     pit_init(PIT_FREQUENCY);
-    fterminal_write("PIT initialized!\n");
+    fvga_write("PIT initialized!\n");
 
     keyboard_init();
-    fterminal_write("Keyboard initialized!\n");
+    fvga_write("Keyboard initialized!\n");
 
     scheduler_init();
-    fterminal_write("Scheduler initialized!\n");
+    fvga_write("Scheduler initialized!\n");
 
-    fterminal_write("Interrupts enabled!\n");
-    fterminal_write("Tasks created!\n");
+    fvga_write("Interrupts enabled!\n");
+    fvga_write("Tasks created!\n");
 
     paging_init();
-    fterminal_write("Paging created!\n");
+    fvga_write("Paging created!\n");
 
     __asm__ volatile("sti");
 

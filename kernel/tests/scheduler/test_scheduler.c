@@ -77,7 +77,7 @@ static void monitor()
     {
         if (timer_ms() >= next)
         {
-            fterminal_write("A: %i B: %i\n", cntA, cntB);
+            fvga_write("A: %i B: %i\n", cntA, cntB);
             next = timer_ms() + 500;
         }
 
@@ -102,14 +102,14 @@ static void blocker(void)
 {
     blockerStarted = true;
 
-    fterminal_write("blocker: sleeping...\n");
+    fvga_write("blocker: sleeping...\n");
 
     task_block();
 
     // Can only be reached after calling task_unblock()
     blockerWoke = true;
 
-    fterminal_write("blocker: woken!\n");
+    fvga_write("blocker: woken!\n");
 
     task_exit();
 }
@@ -134,7 +134,7 @@ static void waker(void)
 
     int result = task_unblock(blockerID);
 
-    fterminal_write("waker: unblock %i -> %i\n", blockerID, result);
+    fvga_write("waker: unblock %i -> %i\n", blockerID, result);
 
     if (result < 0)
     {
@@ -187,7 +187,7 @@ static void spawner(void)
     }
 
     // Print the number of failures
-    fterminal_write("spawner: create failures = %i\n", failures);
+    fvga_write("spawner: create failures = %i\n", failures);
 
     uint64_t endTime = timer_ms() + 500;
 
@@ -261,14 +261,14 @@ static void test_result(void)
         task_yield();
     }
 
-    fterminal_write("\n");
-    fterminal_write("==============================\n");
-    fterminal_write("Scheduler test results\n");
-    fterminal_write("==============================\n");
+    fvga_write("\n");
+    fvga_write("==============================\n");
+    fvga_write("Scheduler test results\n");
+    fvga_write("==============================\n");
 
-    fterminal_write("Tests run:    %i\n", runningTestCnt);
-    fterminal_write("Tests passed: %i\n", passedTestCnt);
-    fterminal_write("Tests failed: %i\n", failedTestCnt);
+    fvga_write("Tests run:    %i\n", runningTestCnt);
+    fvga_write("Tests passed: %i\n", passedTestCnt);
+    fvga_write("Tests failed: %i\n", failedTestCnt);
 
     if (failedTestCnt == 0)
     {
@@ -285,10 +285,10 @@ static void test_result(void)
 
 void scheduler_test(void)
 {
-    fterminal_write("\n");
-    fterminal_write("==============================\n");
-    fterminal_write("Starting scheduler tests...\n");
-    fterminal_write("==============================\n");
+    fvga_write("\n");
+    fvga_write("==============================\n");
+    fvga_write("Starting scheduler tests...\n");
+    fvga_write("==============================\n");
 
     // Blocking/unblocking test
     blockerID = task_create(blocker);

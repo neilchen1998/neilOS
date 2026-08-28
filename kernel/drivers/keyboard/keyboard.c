@@ -119,25 +119,25 @@ static void keyboard_handler_extended(uint8_t scancode)
     {
     case SCANCODE_UP:
     {
-        terminal_scroll_up();
+        vga_scroll_up();
         break;
     }
 
     case SCANCODE_PAGE_UP:
     {
-        terminal_page_up();
+        vga_page_up();
         break;
     }
 
     case SCANCODE_DOWN:
     {
-        terminal_scroll_down();
+        vga_scroll_down();
         break;
     }
 
     case SCANCODE_PAGE_DOWN:
     {
-        terminal_page_down();
+        vga_page_down();
         break;
     }
 
@@ -239,7 +239,7 @@ void keyboard_handler(void)
         // Only put the character if it is valid
         if (c != 0)
         {
-            terminal_putchar(c);
+            vga_putchar(c);
         }
     }
 
