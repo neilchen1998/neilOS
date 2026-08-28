@@ -74,6 +74,13 @@ make debug
 
 ## Note
 
+### Assembly Byte, Word, DWord, QWord
+
+- **db** (define byte):	1 byte / 8 bits
+- **dw** (define word):	2 bytes / 16 bits
+- **dd** (define doubleword):	4 bytes / 32 bits
+- **dq** (define quadword):	8 bytes / 64 bits
+
 ### cdecl
 
 On 32-bit x86, the most common C calling convention is cdecl.
@@ -192,6 +199,45 @@ b                                      split
 ### Memory Map
 
 #### Real mode address space
+
+### Kernel Code Descriptor
+
+#### Decode **0x00CF9A000000FFFF**
+
+```text
+63            56 55       48 47       40 39       32 31           24 23       16 15        8 7         0
++---------------+-----------+-----------+-----------+---------------+-----------+-----------+-----------+
+| 0x00          | 0xCF      | 0x9A      | 0x00      | 0x00          | 0x00      | 0xFF      | 0xFF      |
++---------------+-----------+-----------+-----------+---------------+-----------+-----------+-----------+
+```
+
+#### Access byte:
+
+```text
+0x9A = 1001 1010
+       ││││ │││└─ Accessed = 0
+       ││││ ││└── Readable = 1
+       ││││ │└─── Conforming = 0
+       ││││ └──── Executable = 1
+       │││└────── Descriptor type = 1 (code/data)
+       ││└─────── DPL bit 1 = 0
+       │└──────── DPL bit 0 = 0
+       └───────── Present = 1
+```
+
+#### Upper limit bits & flags:
+
+```text
+0xCF = 1100 1111
+       ││││ │││└─ Limit bit 16
+       ││││ ││└── Limit bit 17
+       ││││ │└─── Limit bit 18
+       ││││ └──── Limit bit 19
+       │││└────── AVL = 0
+       ││└─────── L = 0
+       │└──────── D/B = 1 (32-bit)
+       └───────── G = 1 (4 KiB)
+```
 
 ## Resources
 
