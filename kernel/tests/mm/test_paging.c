@@ -12,7 +12,7 @@
 
 static void paging_test_fail(const char* message)
 {
-    fterminal_write("PAGING TEST FAILED: %s\n", message);
+    fvga_write("PAGING TEST FAILED: %s\n", message);
 
     /*
      * Stop here so a failure does not corrupt the rest of the kernel.
@@ -26,18 +26,18 @@ static void paging_test_fail(const char* message)
 
 static void paging_test_pass(const char* message)
 {
-    fterminal_write("PAGING TEST PASSED: %s\n", message);
+    fvga_write("PAGING TEST PASSED: %s\n", message);
 }
 
 void paging_test(void)
 {
-    fterminal_write("\n=== PAGING TEST START ===\n");
+    fvga_write("\n=== PAGING TEST START ===\n");
 
     /*
      * Enable paging and establish the initial identity mapping.
      */
 
-    fterminal_write("1. paging_init: OK\n");
+    fvga_write("1. paging_init: OK\n");
 
     /*
      * Verify that the initial identity mapping works.
@@ -50,7 +50,7 @@ void paging_test(void)
 
     if (*identity != 0x12345678u)
     {
-        fterminal_write("1. identity mapping: FAILED\n");
+        fvga_write("1. identity mapping: FAILED\n");
 
         for (;;)
         {
@@ -59,18 +59,18 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("2. identity mapping: OK\n");
+    fvga_write("2. identity mapping: OK\n");
 
     /*
      * Allocate a physical page for the mapping test.
      */
     uint32_t testPhysical = physical_alloc_page();
 
-    fterminal_write("3. allocated physical page: %x\n", testPhysical);
+    fvga_write("3. allocated physical page: %x\n", testPhysical);
 
     if (testPhysical == 0)
     {
-        fterminal_write("3. physical allocation: FAILED\n");
+        fvga_write("3. physical allocation: FAILED\n");
 
         for (;;)
         {
@@ -84,7 +84,7 @@ void paging_test(void)
      */
     if ((testPhysical & (PAGE_SIZE - 1u)) != 0)
     {
-        fterminal_write("4. physical alignment: FAILED (%x)\n", testPhysical);
+        fvga_write("4. physical alignment: FAILED (%x)\n", testPhysical);
 
         for (;;)
         {
@@ -93,7 +93,7 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("4. physical alignment: OK\n");
+    fvga_write("4. physical alignment: OK\n");
 
     /*
      * IMPORTANT:
@@ -107,7 +107,7 @@ void paging_test(void)
 
     *physical = 0xCAFEBABEu;
 
-    fterminal_write("5. physical page access: OK\n");
+    fvga_write("5. physical page access: OK\n");
 
     /*
      * 0x00400000 is the first virtual address after the initial
@@ -115,15 +115,15 @@ void paging_test(void)
      */
     const uint32_t testVirtual = 0x00400000u;
 
-    fterminal_write("6. mapping %x -> %x\n", testVirtual, testPhysical);
+    fvga_write("6. mapping %x -> %x\n", testVirtual, testPhysical);
 
     int result = paging_map(testVirtual, testPhysical, PAGE_WRITABLE);
 
-    fterminal_write("7. paging_map returned: %d\n", result);
+    fvga_write("7. paging_map returned: %d\n", result);
 
     if (result != 0)
     {
-        fterminal_write("7. paging_map: FAILED\n");
+        fvga_write("7. paging_map: FAILED\n");
 
         for (;;)
         {
@@ -132,18 +132,18 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("7. paging_map: OK\n");
+    fvga_write("7. paging_map: OK\n");
 
     /*
      * Access the physical page through the new virtual address.
      */
     volatile uint32_t* virtual = (volatile uint32_t*)(uintptr_t)testVirtual;
 
-    fterminal_write("8. testing virtual address %x\n", testVirtual);
+    fvga_write("8. testing virtual address %x\n", testVirtual);
 
     if (*virtual != 0xCAFEBABEu)
     {
-        fterminal_write("8. virtual read: FAILED, got %x\n", *virtual);
+        fvga_write("8. virtual read: FAILED, got %x\n", *virtual);
 
         for (;;)
         {
@@ -152,7 +152,7 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("8. virtual read: OK\n");
+    fvga_write("8. virtual read: OK\n");
 
     /*
      * Write through the virtual address.
@@ -161,7 +161,7 @@ void paging_test(void)
 
     if (*physical != 0xDEADBEEFu)
     {
-        fterminal_write("9. virtual write: FAILED, physical=%x\n", *physical);
+        fvga_write("9. virtual write: FAILED, physical=%x\n", *physical);
 
         for (;;)
         {
@@ -170,18 +170,18 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("9. virtual write: OK\n");
+    fvga_write("9. virtual write: OK\n");
 
     /*
      * Remove the mapping.
      */
     result = paging_unmap(testVirtual);
 
-    fterminal_write("10. paging_unmap returned: %d\n", result);
+    fvga_write("10. paging_unmap returned: %d\n", result);
 
     if (result != 0)
     {
-        fterminal_write("10. paging_unmap: FAILED\n");
+        fvga_write("10. paging_unmap: FAILED\n");
 
         for (;;)
         {
@@ -190,7 +190,7 @@ void paging_test(void)
         }
     }
 
-    fterminal_write("10. paging_unmap: OK\n");
+    fvga_write("10. paging_unmap: OK\n");
 
     /*
      * Don't access testVirtual here!
@@ -204,7 +204,7 @@ void paging_test(void)
 
     physical_free_page(testPhysical);
 
-    fterminal_write("11. physical page freed: OK\n");
+    fvga_write("11. physical page freed: OK\n");
 
-    fterminal_write("=== PAGING TEST COMPLETE ===\n");
+    fvga_write("=== PAGING TEST COMPLETE ===\n");
 }

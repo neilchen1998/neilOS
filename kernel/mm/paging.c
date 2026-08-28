@@ -140,19 +140,19 @@ void paging_init(void)
 
 int paging_map(uint32_t virtualAddress, uint32_t physicalAddress, uint32_t flags)
 {
-    fterminal_write("paging_map: VA=%x PA=%x\n", virtualAddress, physicalAddress);
+    fvga_write("paging_map: VA=%x PA=%x\n", virtualAddress, physicalAddress);
 
-    fterminal_write("paging_map: VA valid=%d PA valid=%d\n", page_address_valid(virtualAddress), page_address_valid(physicalAddress));
+    fvga_write("paging_map: VA valid=%d PA valid=%d\n", page_address_valid(virtualAddress), page_address_valid(physicalAddress));
 
     if (!page_address_valid(virtualAddress))
     {
-        fterminal_write("paging_map: INVALID VIRTUAL\n");
+        fvga_write("paging_map: INVALID VIRTUAL\n");
         return -1;
     }
 
     if (!page_address_valid(physicalAddress))
     {
-        fterminal_write("paging_map: INVALID PHYSICAL\n");
+        fvga_write("paging_map: INVALID PHYSICAL\n");
         return -1;
     }
 

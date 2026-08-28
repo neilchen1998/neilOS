@@ -8,12 +8,12 @@
 
 void kernel_tests_run(void)
 {
-    fterminal_write("\n=== KERNEL TESTS ===\n");
+    fvga_write("\n=== KERNEL TESTS ===\n");
 
     kmalloc_test();
     paging_test();
     physical_test();
     scheduler_test();
 
-    fterminal_write("=== TESTS COMPLETE ===\n");
+    fvga_write("=== TESTS COMPLETE ===\n");
 }

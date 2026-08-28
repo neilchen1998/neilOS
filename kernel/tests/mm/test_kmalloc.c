@@ -9,14 +9,14 @@
 
 void kmalloc_test(void)
 {
-    fterminal_write("kmalloc: starting tests...\n");
+    fvga_write("kmalloc: starting tests...\n");
 
     /* Test 1: Basic allocation and write/read */
     int* a = kmalloc(64);
 
     if (!a)
     {
-        fterminal_write("kmalloc: FAIL - basic allocation\n");
+        fvga_write("kmalloc: FAIL - basic allocation\n");
         return;
     }
 
@@ -25,7 +25,7 @@ void kmalloc_test(void)
 
     if (a[0] != 0x12345678 || a[1] != 0xDEADBEEF)
     {
-        fterminal_write("kmalloc: FAIL - basic read/write\n");
+        fvga_write("kmalloc: FAIL - basic read/write\n");
         kfree(a);
         return;
     }

@@ -13,11 +13,11 @@ void physical_test(void)
     uint32_t b = physical_alloc_page();
     uint32_t c = physical_alloc_page();
 
-    fterminal_write("physical test:\n");
+    fvga_write("physical test:\n");
 
-    fterminal_write("  a = %x\n", a);
-    fterminal_write("  b = %x\n", b);
-    fterminal_write("  c = %x\n", c);
+    fvga_write("  a = %x\n", a);
+    fvga_write("  b = %x\n", b);
+    fvga_write("  c = %x\n", c);
 
     if (a == 0 || b == 0 || c == 0)
     {
@@ -47,7 +47,7 @@ void physical_test(void)
 
     uint32_t d = physical_alloc_page();
 
-    fterminal_write("  d = %x\n", d);
+    fvga_write("  d = %x\n", d);
 
     if (d != b)
     {
