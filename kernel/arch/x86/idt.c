@@ -7,6 +7,7 @@
 #include "drivers/timer/pit.h"
 #include "drivers/video/vga.h"
 #include "scheduler/scheduler.h"
+#include "syscall/syscall.h"
 
 #define IDT_ENTRIES 256
 
@@ -274,6 +275,11 @@ struct registers* interrupt_handler(struct registers* regs)
     case 50:
         // software exit interrupt
         return scheduler_exit(regs);
+
+    case SYSCALL_VECTOR:
+    {
+        return syscall_dispatch(regs);
+    }
 
     case 34:
     case 35:

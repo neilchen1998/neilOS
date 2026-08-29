@@ -169,7 +169,8 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 	kernel/mm/kmalloc.c \
 	kernel/mm/paging.c \
 	kernel/mm/physical.c \
-	kernel/scheduler/scheduler.c
+	kernel/scheduler/scheduler.c \
+	kernel/syscall/syscall.c
 
 KERNEL_TEST_C_SOURCES := \
 	kernel/tests/common/test_assert.c \
@@ -178,7 +179,8 @@ KERNEL_TEST_C_SOURCES := \
 	kernel/tests/mm/test_kmalloc.c \
 	kernel/tests/mm/test_paging.c \
 	kernel/tests/mm/test_physical.c \
-	kernel/tests/scheduler/test_scheduler.c
+	kernel/tests/scheduler/test_scheduler.c \
+	kernel/tests/syscall/test_syscall.c
 
 KERNEL_ASM_SOURCES := kernel/main.asm kernel/arch/x86/gdt.asm kernel/arch/x86/isr.asm
 
