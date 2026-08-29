@@ -172,6 +172,7 @@ KERNEL_C_SOURCES := kernel/kernel.c \
 	kernel/scheduler/scheduler.c
 
 KERNEL_TEST_C_SOURCES := \
+	kernel/tests/common/test_assert.c \
 	kernel/tests/common/test_output.c \
 	kernel/tests/tests.c \
 	kernel/tests/mm/test_kmalloc.c \
